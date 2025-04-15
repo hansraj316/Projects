@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drive to Airtable via MCP</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        label,
+        input,
+        button {
+            display: block;
+            margin-bottom: 10px;
+            width: 95%;
+        }
+        button {
+            cursor: pointer;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 100%;
+        }
+        .message {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+        .info {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google Drive to Airtable</h1>
+        <p>Fetch image metadata from Google Drive and save to Airtable</p>
+
+        {% if mock_mode %}
+        <div class="message warning">
+            <strong>Test Mode:</strong> Running with mock MCP functions. Data will not be sent to real Google Drive or Airtable.
+        </div>
+        {% endif %}
+
+        {% if success %}
+            <div class="message success">
+                Successfully fetched metadata for '{{ filename }}' and saved to Airtable.
+                {% if updated %}
+                    (Existing record updated)
+                {% else %}
+                    (New record created)
+                {% endif %}
+            </div>
+        {% endif %}
+        {% if error %}
+            <div class="message error">
+                Error: {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST">
+            <label for="file_id">Google Drive File ID:</label>
+            <input type="text" id="file_id" name="file_id" placeholder="Enter the Google Drive file ID..." required>
+            <button type="submit">Fetch and Save Metadata</button>
+        </form>
+
+        <div class="info">
+            <h3>How to find a Google Drive File ID:</h3>
+            <ol>
+                <li>Open the file in Google Drive</li>
+                <li>From the URL (example: https://drive.google.com/file/d/<b>1a2b3c4d5e6f7g8h9i</b>/view)</li>
+                <li>The ID is the part between /d/ and /view</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html> 
