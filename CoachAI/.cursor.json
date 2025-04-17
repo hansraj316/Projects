@@ -1,0 +1,23 @@
+{
+  "projectType": "python",
+  "rules": [
+    {
+      "pattern": "**/*.py",
+      "language": "python"
+    },
+    {
+      "pattern": "requirements.txt",
+      "language": "text"
+    },
+    {
+      "pattern": "README.md",
+      "language": "markdown"
+    }
+  ],
+  "ignore": [
+    "__pycache__",
+    ".venv",
+    ".env",
+    "*.pyc"
+  ]
+} 
