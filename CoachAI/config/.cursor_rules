@@ -1,0 +1,13 @@
+style: pep8, type hints
+models:
+  core: [o4-mini, o3]
+  code: [gpt-4.1, code-davinci-002]
+  chat: [gpt-3.5-turbo]
+memory: openai_vector_stores
+ui:
+  web: streamlit
+  mobile: kivy
+intents:
+  - plan: core_agent
+  - code: code_agent
+  - explain: chat_agent 
