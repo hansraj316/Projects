@@ -1,0 +1,208 @@
+#:kivy 2.2.0
+
+<WizardScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '10dp'
+        spacing: '10dp'
+
+        ProgressBar:
+            id: progress_bar
+            max: 1
+            size_hint_y: None
+            height: '20dp'
+
+<TopicScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        Label:
+            text: 'What would you like to learn?'
+            font_size: '24sp'
+            size_hint_y: None
+            height: '40dp'
+
+        TextInput:
+            id: topic_input
+            hint_text: 'Enter subject or skill'
+            multiline: False
+            size_hint_y: None
+            height: '40dp'
+
+        Button:
+            text: 'Next'
+            size_hint_y: None
+            height: '50dp'
+            on_release: root.on_next(topic_input.text)
+
+<CurrentLevelScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        Label:
+            text: "What's your current level?"
+            font_size: '24sp'
+
+        Spinner:
+            id: level_spinner
+            text: 'Beginner'
+            values: ['Beginner', 'Intermediate', 'Advanced']
+            size_hint_y: None
+            height: '50dp'
+
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: '10dp'
+
+            Button:
+                text: 'Previous'
+                on_release: root.manager.current = 'topic'
+
+            Button:
+                text: 'Next'
+                on_release: root.on_next(level_spinner.text)
+
+<TargetLevelScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        Label:
+            text: "What's your target level?"
+            font_size: '24sp'
+
+        Spinner:
+            id: target_spinner
+            text: 'Intermediate'
+            values: ['Intermediate', 'Advanced', 'Expert']
+            size_hint_y: None
+            height: '50dp'
+
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: '10dp'
+
+            Button:
+                text: 'Previous'
+                on_release: root.manager.current = 'current_level'
+
+            Button:
+                text: 'Next'
+                on_release: root.on_next(target_spinner.text)
+
+<TimeCommitmentScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        Label:
+            text: 'How much time can you commit?'
+            font_size: '24sp'
+
+        Spinner:
+            id: time_spinner
+            text: '3-5 hours'
+            values: ['1-2 hours', '3-5 hours', '5-10 hours', '10+ hours']
+            size_hint_y: None
+            height: '50dp'
+
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: '10dp'
+
+            Button:
+                text: 'Previous'
+                on_release: root.manager.current = 'target_level'
+
+            Button:
+                text: 'Next'
+                on_release: root.on_next(time_spinner.text)
+
+<LearningStyleScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        Label:
+            text: "What's your preferred learning style?"
+            font_size: '24sp'
+
+        Spinner:
+            id: style_spinner
+            text: 'Visual'
+            values: ['Visual', 'Reading/Writing', 'Auditory', 'Hands-on']
+            size_hint_y: None
+            height: '50dp'
+
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            spacing: '10dp'
+
+            Button:
+                text: 'Previous'
+                on_release: root.manager.current = 'time_commitment'
+
+            Button:
+                text: 'Generate Plan'
+                on_release: root.on_next(style_spinner.text)
+
+<ResultsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: '20dp'
+        spacing: '20dp'
+
+        ScrollView:
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: '20dp'
+
+                Label:
+                    id: plan_title
+                    font_size: '24sp'
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+                Label:
+                    id: plan_description
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+                Label:
+                    id: plan_milestones
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+                Label:
+                    id: plan_resources
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+                Label:
+                    id: plan_next_steps
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+
+        Button:
+            text: 'Start Over'
+            size_hint_y: None
+            height: '50dp'
+            on_release: root.manager.current = 'topic' 
