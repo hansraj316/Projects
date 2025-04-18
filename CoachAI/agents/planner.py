@@ -28,51 +28,60 @@ class PlannerAgent:
         self.client = openai.OpenAI(api_key=settings.openai_api_key)
 
     def create_plan(self, goal: LearningGoal) -> LearningPlan:
-        """Generate a learning plan using OpenAI's Responses API with web search."""
+        """Generate a learning plan using OpenAI's Responses API."""
         try:
-            # Create the learning plan using Responses API with web search
-            plan_prompt = f"""
-            Create a detailed learning plan for:
+            # Create a combined prompt for both plan and resources
+            combined_prompt = f"""
+            Create a comprehensive learning plan and resource list for:
             Topic: {goal.topic}
             Current Level: {goal.current_level}
             Target Level: {goal.target_level}
             Available Time: {goal.time_commitment} per week
             Learning Style: {goal.learning_style}
 
-            Use web search to find current and relevant information about learning paths, 
-            best practices, and modern approaches for this topic.
-            """
+            Please provide your response in two clearly separated sections:
 
-            plan_response = self.client.responses.create(
-                model="gpt-4.1",
-                tools=[{"type": "web_search_preview"}],
-                input=plan_prompt
-            )
+            SECTION 1 - LEARNING PLAN
+            The plan should include:
+            1. Clear learning objectives
+            2. Step-by-step progression
+            3. Practical exercises and projects
+            4. Estimated time for each section
+            5. Milestones and checkpoints
 
-            # Get resource suggestions using web search
-            resources_prompt = f"""
-            Search for and suggest the most relevant and up-to-date learning resources for:
-            Topic: {goal.topic}
-            Level: {goal.current_level}
-            Learning Style: {goal.learning_style}
-
-            Focus on resources that:
+            SECTION 2 - RECOMMENDED RESOURCES
+            List 5-7 highly relevant resources that:
             1. Are highly rated and well-reviewed
             2. Match the specified learning style
             3. Are currently available and maintained
             4. Are suitable for the user's current level
+
+            Format each resource as:
+            - Resource Name: Brief description
             """
 
-            resources_response = self.client.responses.create(
-                model="gpt-4.1",
+            response = self.client.responses.create(
+                model="gpt-4o",
                 tools=[{"type": "web_search_preview"}],
-                input=resources_prompt
+                input=combined_prompt
             )
+
+            # Split the response into plan and resources
+            content = response.output_text
+            sections = content.split("SECTION 2 - RECOMMENDED RESOURCES")
+            
+            if len(sections) != 2:
+                # Fallback if the response doesn't follow the format
+                plan_content = content
+                resources_content = ""
+            else:
+                plan_content = sections[0].replace("SECTION 1 - LEARNING PLAN", "").strip()
+                resources_content = sections[1].strip()
 
             # Create the learning plan
             return LearningPlan(
-                content=plan_response.output_text,
-                suggested_resources=self._format_resources(resources_response.output_text),
+                content=plan_content,
+                suggested_resources=self._format_resources(resources_content),
                 estimated_duration=f"Based on {goal.time_commitment} per week commitment"
             )
 
