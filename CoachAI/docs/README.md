@@ -7,12 +7,15 @@ CoachAI is an intelligent learning path generator that creates personalized lear
 - 🎯 Personalized learning plan generation
 - 🌐 Real-time web search integration for current resources
 - 🎨 Learning style adaptation
-- ⏱️ Time-based planning
+- ⏱️ Time-based planning and tracking
+- 📊 Comprehensive dashboard for learning progress
+- 🌙 Dark mode UI for better visibility
 - 📚 Curated resource recommendations
 - 💾 Downloadable learning plans
 - 💳 Subscription tiers with Stripe integration
 - 📧 Email notifications for premium users
 - 🔑 In-app OpenAI API key configuration
+- 🧠 User learning data persistence
 
 ## System Architecture 🏗️
 
@@ -166,6 +169,8 @@ pip install -r requirements-dev.txt  # For development
 export OPENAI_API_KEY='your-openai-api-key-here'
 export STRIPE_SECRET_KEY='your-stripe-secret-key-here'
 export STRIPE_WEBHOOK_SECRET='your-stripe-webhook-secret-here'
+export SUPABASE_URL='your-supabase-url-here'
+export SUPABASE_KEY='your-supabase-key-here'
 ```
 
 ### Usage
@@ -175,23 +180,34 @@ export STRIPE_WEBHOOK_SECRET='your-stripe-webhook-secret-here'
 streamlit run ui/web/app.py
 ```
 
-2. Follow the 5-step wizard to create your learning plan:
+2. Use the intuitive navigation sidebar to move between:
+   - Dashboard: Track your learning progress
+   - Learning Plan: Create personalized learning plans
+   - Settings: Configure API keys and subscription
+
+3. Follow the 5-step wizard to create your learning plan:
    - Step 1: Choose your learning topic
    - Step 2: Specify your current knowledge level
    - Step 3: Define your learning purpose
    - Step 4: Set your time commitment
    - Step 5: Select preferred learning resources
 
-3. Get your personalized learning plan!
+4. Get your personalized learning plan!
 
-4. Upgrade to Premium for additional features:
+5. Track your learning progress with the comprehensive dashboard:
+   - View estimated vs. actual learning time
+   - Monitor task completion
+   - Log your learning hours
+   - Visualize your progress
+
+6. Upgrade to Premium for additional features:
    - 10 learning plans per day (vs 1 for free users)
    - 10 resources per plan (vs 3 for free users)
    - Email delivery of learning plans
    - Priority support
 
-5. Configure your OpenAI API key in the app:
-   - Expand the "⚙️ API Settings" section in the sidebar
+7. Configure your OpenAI API key in Settings:
+   - Navigate to the "⚙️ Settings" section in the sidebar
    - Enter your OpenAI API key
    - Click "Save API Key"
 
@@ -207,9 +223,13 @@ CoachAI/
 │   └── stripe_agent.py    # Subscription and payment processing
 ├── ui/
 │   └── web/
-│       └── app.py         # Streamlit web interface
+│       ├── app.py         # Streamlit web interface
+│       ├── dashboard.py   # Learning tracking dashboard
+│       ├── theme.py       # Dark mode and UI theming 
+│       └── utils.py       # Helper functions
 ├── src/
-│   └── config.py          # Configuration and settings
+│   ├── config.py          # Configuration and settings
+│   └── storage.py         # User data persistence
 ├── tests/
 │   ├── test_planner.py
 │   ├── test_stripe.py
@@ -489,4 +509,4 @@ For support, please open an issue in the GitHub repository or contact the mainta
 
 ---
 
-Made with ❤️ by [Your Name/Team] 
+Made with ❤️ by [Hansraj] 

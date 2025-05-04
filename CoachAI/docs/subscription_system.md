@@ -2,7 +2,7 @@
 
 ## Overview
 
-CoachAI implements a tiered subscription model using Stripe for payment processing. The system offers two tiers:
+CoachAI implements a tiered subscription model using Stripe for payment processing, with user data persistence through Supabase. The system offers two tiers:
 
 1. **Freemium** - Basic functionality at no cost
 2. **Premium** - Enhanced functionality for a monthly subscription fee
@@ -15,6 +15,7 @@ The subscription system consists of:
 - **UI Integration**: Streamlit components for subscription management
 - **Webhook Handling**: For processing Stripe event notifications
 - **Session State Management**: For tracking user subscription status
+- **Supabase Storage**: For persisting user subscription data
 
 ```mermaid
 graph LR
@@ -29,6 +30,8 @@ graph LR
     E -->|Updates User Status| B
     E -->|Triggers Email| F[EmailAgent]
     F -->|Sends Confirmation| A
+    E -->|Persists Data| G[Supabase]
+    B -->|Retrieves User Data| G
 ```
 
 ## Subscription Tiers
@@ -38,6 +41,8 @@ graph LR
 | Learning plans per day | 1 | 10 |
 | Resources per plan | 3 | 10 |
 | Email notifications | ❌ | ✅ |
+| Time tracking | ✅ | ✅ |
+| Dashboard analytics | ✅ | ✅ |
 | Price | Free | $9.99/month |
 
 ## Implementation Details
@@ -56,18 +61,18 @@ class StripeAgent:
         # Configure tiers and their features
         self.tier_configs = {
             SubscriptionTier.FREEMIUM: SubscriptionConfig(
+                tier=SubscriptionTier.FREEMIUM,
                 daily_plans=1,
                 resources_per_plan=3,
                 email_notifications=False,
-                price=0.0,
-                tier=SubscriptionTier.FREEMIUM
+                price=0.0
             ),
             SubscriptionTier.PREMIUM: SubscriptionConfig(
+                tier=SubscriptionTier.PREMIUM,
                 daily_plans=10,
                 resources_per_plan=10,
                 email_notifications=True,
-                price=9.99,
-                tier=SubscriptionTier.PREMIUM
+                price=9.99
             )
         }
         
@@ -144,49 +149,132 @@ def verify_webhook_signature(payload: Dict, signature: str, webhook_secret: str)
 
 ### UI Integration
 
-The subscription status is displayed in the sidebar of the application:
+The subscription status is displayed in the Settings page of the application:
 
 ```python
-def subscription_sidebar():
-    """Display subscription information in sidebar."""
-    st.sidebar.title("📊 Subscription Status")
+def render_subscription_tab():
+    """Display subscription information in the Settings page."""
     
     stripe_agent = st.session_state.stripe_agent
     current_tier = st.session_state.subscription.tier
     
     # Display current tier and features
-    st.sidebar.markdown(f"**Current Tier:** {current_tier.value.title()}")
-    st.sidebar.markdown(stripe_agent.get_tier_description(current_tier))
+    st.markdown(f"## Current Tier: {current_tier.value.title()}")
+    st.markdown(stripe_agent.get_tier_description(current_tier))
     
     # Show upgrade button for freemium users
     if current_tier == SubscriptionTier.FREEMIUM:
-        st.sidebar.markdown("---")
-        if st.sidebar.button("🌟 Upgrade to Premium"):
+        st.markdown("---")
+        if st.button("🌟 Upgrade to Premium"):
             handle_subscription_upgrade()
     
     # Show usage statistics
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Today's Usage")
+    st.markdown("---")
+    st.markdown("### Today's Usage")
     max_plans = stripe_agent.get_tier_features(current_tier)["daily_plans"]
-    st.sidebar.markdown(f"Plans created today: {st.session_state.plans_created_today}/{max_plans}")
+    st.markdown(f"Plans created today: {st.session_state.plans_created_today}/{max_plans}")
+```
+
+### API Key Management
+
+The OpenAI API key is managed in the Settings page:
+
+```python
+def render_api_settings_tab():
+    """Display API settings in the Settings page."""
+    st.markdown("## OpenAI API Key Configuration")
     
-    # Add API settings section
-    st.sidebar.markdown("---")
-    with st.sidebar.expander("⚙️ API Settings"):
-        # OpenAI API key configuration
-        from src.config import settings
-        current_key = settings.openai_api_key
-        masked_key = f"{current_key[:5]}...{current_key[-4:]}" if current_key else "Not set"
+    # Display instructions for getting an API key
+    st.markdown("""
+    To use CoachAI, you need an OpenAI API key with GPT-4 access. If you don't have one:
+    
+    1. Go to [OpenAI API Keys](https://platform.openai.com/api-keys)
+    2. Create a new secret key
+    3. Copy and paste it below
+    """)
+    
+    # Show current key status
+    from src.config import settings
+    current_key = settings.openai_api_key
+    
+    if current_key:
+        # Only show the first few and last few characters of the API key
+        masked_key = f"{current_key[:5]}...{current_key[-4:]}" if len(current_key) > 10 else "****"
+        st.success(f"✅ OpenAI API Key: {masked_key}")
+    else:
+        st.warning("⚠️ No OpenAI API key set. Please enter your key below.")
+    
+    # Input field for new API key
+    new_api_key = st.text_input("Enter OpenAI API Key", type="password")
+    
+    if st.button("Save API Key"):
+        if new_api_key:
+            # Update the API key in session and configuration
+            os.environ["OPENAI_API_KEY"] = new_api_key
+            settings.openai_api_key = new_api_key
+            
+            # Store in user data if available
+            if "storage_client" in st.session_state and "user_id" in st.session_state:
+                st.session_state.storage_client.store_api_key(
+                    st.session_state.user_id, 
+                    encrypt_api_key(new_api_key)
+                )
+                
+            st.success("API key saved successfully!")
+            st.rerun()
+```
+
+### Supabase Integration
+
+User data including subscription status is stored in Supabase:
+
+```python
+class SupabaseStorage:
+    def __init__(self, url, api_key):
+        """Initialize Supabase client."""
+        self.supabase = create_client(url, api_key)
         
-        st.markdown(f"**OpenAI API Key:** {masked_key}")
-        new_api_key = st.text_input("Enter OpenAI API Key", type="password")
+    def upsert_user_data(self, user_data):
+        """Store or update user data in Supabase."""
+        # Prepare data for storage (convert complex objects to JSON)
+        storage_data = {
+            "user_id": user_data["user_id"],
+            "learning_plan": json.dumps(user_data["learning_plan"]) if user_data["learning_plan"] else None,
+            "time_logs": json.dumps(user_data["time_logs"]),
+            "actual_time_spent": user_data["actual_time_spent"],
+            "theme_mode": user_data["theme_mode"],
+            "subscription_tier": user_data["subscription"],
+            "updated_at": datetime.now().isoformat()
+        }
         
-        if st.button("Save API Key"):
-            if new_api_key:
-                os.environ["OPENAI_API_KEY"] = new_api_key
-                settings.openai_api_key = new_api_key
-                st.success("API key updated successfully!")
-                st.rerun()
+        # Store in users table
+        self.supabase.table("users").upsert(storage_data).execute()
+        
+    def get_user_data(self, user_id):
+        """Retrieve user data from Supabase."""
+        response = self.supabase.table("users").select("*").eq("user_id", user_id).execute()
+        
+        if response.data and len(response.data) > 0:
+            user_data = response.data[0]
+            
+            # Convert JSON strings back to Python objects
+            if user_data.get("learning_plan"):
+                user_data["learning_plan"] = json.loads(user_data["learning_plan"])
+                
+            if user_data.get("time_logs"):
+                user_data["time_logs"] = json.loads(user_data["time_logs"])
+                
+            return user_data
+            
+        return None
+        
+    def store_api_key(self, user_id, encrypted_key):
+        """Store encrypted API key for user."""
+        self.supabase.table("api_keys").upsert({
+            "user_id": user_id,
+            "api_key": encrypted_key,
+            "updated_at": datetime.now().isoformat()
+        }).execute()
 ```
 
 ### Success and Cancel Pages
@@ -202,14 +290,14 @@ The application maintains subscription-related data in Streamlit's session state
 
 ```python
 # Initialize subscription tracking if not already present
-if not has_subscription:
+if "subscription" not in st.session_state:
     from agents.stripe_agent import SubscriptionTier, SubscriptionConfig
     st.session_state.subscription = SubscriptionConfig(
+        tier=SubscriptionTier.FREEMIUM,
         daily_plans=1,
         resources_per_plan=3,
         email_notifications=False,
-        price=0.0,
-        tier=SubscriptionTier.FREEMIUM
+        price=0.0
     )
 else:
     # Restore premium status if it existed
@@ -230,6 +318,9 @@ The following environment variables are required:
 ```
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_webhook_secret
+OPENAI_API_KEY=your_openai_api_key
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
 ```
 
 ## Testing
@@ -248,10 +339,9 @@ For local testing:
 Common issues:
 
 1. **Webhook Verification Fails**: Ensure the webhook secret is correctly set and valid
-2. **Session Routing Issues**: Check URL parameter handling in the application
-3. **Payment Link Not Working**: Verify Stripe API key and product/price configuration
-4. **Premium Features Not Available After Payment**: Check session state persistence and webhook processing
-5. **Plan Limits Not Working**: Verify the plans counter is correctly incremented and checked
+2. **SubscriptionConfig Initialization Error**: Make sure to provide the 'tier' parameter first when creating a SubscriptionConfig object
+3. **API Key Not Working**: Check if the key is valid and has proper permissions for GPT-4
+4. **Supabase Connection Issues**: Verify your Supabase URL and API key are correctly configured
 
 ## Recent Improvements
 
