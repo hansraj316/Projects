@@ -1,6 +1,6 @@
 """Simple Planner Agent using OpenAI's Responses API for learning path generation."""
 
-from typing import Dict, List
+from typing import Dict, List, Union
 import openai
 from pydantic import BaseModel
 
@@ -8,11 +8,18 @@ from src.config import settings
 
 class LearningGoal(BaseModel):
     """User's learning goals and preferences."""
-    topic: str
-    current_level: str
-    target_level: str
+    subject: str
+    level: str
+    current_knowledge: str
+    learning_purpose: str
     time_commitment: str
-    learning_style: str
+    preferred_resources: Union[str, List[str]]  # Can be either string or list
+
+    def __init__(self, **data):
+        # Convert list to string if needed
+        if isinstance(data.get('preferred_resources', ''), list):
+            data['preferred_resources'] = ', '.join(data['preferred_resources'])
+        super().__init__(**data)
 
 class LearningPlan(BaseModel):
     """Generated learning plan."""
@@ -25,19 +32,33 @@ class PlannerAgent:
 
     def __init__(self):
         """Initialize OpenAI client."""
-        self.client = openai.OpenAI(api_key=settings.openai_api_key)
+        self.client = None
+        self.update_api_key(settings.openai_api_key)
 
-    def create_plan(self, goal: LearningGoal) -> LearningPlan:
+    def update_api_key(self, api_key: str) -> None:
+        """Update the OpenAI API key."""
+        if not api_key:
+            raise ValueError("OpenAI API key is required")
+        self.client = openai.OpenAI(api_key=api_key)
+
+    async def create_plan(self, goal: LearningGoal) -> LearningPlan:
         """Generate a learning plan using OpenAI's Responses API."""
         try:
+            if not self.client or not self.client.api_key:
+                raise ValueError("OpenAI API key not configured. Please set your API key in the settings.")
+                
+            print(f"Creating plan for subject: {goal.subject}")
+            print(f"Using OpenAI API key: {self.client.api_key[:5]}..." if self.client.api_key else "No API key found")
+            
             # Create a combined prompt for both plan and resources
             combined_prompt = f"""
             Create a comprehensive learning plan and resource list for:
-            Topic: {goal.topic}
-            Current Level: {goal.current_level}
-            Target Level: {goal.target_level}
+            Subject: {goal.subject}
+            Level: {goal.level}
+            Current Knowledge: {goal.current_knowledge}
+            Learning Purpose: {goal.learning_purpose}
             Available Time: {goal.time_commitment} per week
-            Learning Style: {goal.learning_style}
+            Preferred Resources: {goal.preferred_resources}
 
             Please provide your response in two clearly separated sections:
 
@@ -52,22 +73,34 @@ class PlannerAgent:
             SECTION 2 - RECOMMENDED RESOURCES
             List 5-7 highly relevant resources that:
             1. Are highly rated and well-reviewed
-            2. Match the specified learning style
+            2. Match the specified learning preferences
             3. Are currently available and maintained
             4. Are suitable for the user's current level
 
             Format each resource as:
             - Resource Name: Brief description
             """
-
-            response = self.client.responses.create(
-                model="gpt-4o",
-                tools=[{"type": "web_search_preview"}],
-                input=combined_prompt
-            )
+            
+            print("Sending request to OpenAI API...")
+            
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are an expert learning plan creator."},
+                        {"role": "user", "content": combined_prompt}
+                    ]
+                )
+                print("Received response from OpenAI API")
+                content = response.choices[0].message.content
+            except openai.AuthenticationError:
+                raise ValueError("Invalid OpenAI API key. Please check your API key in the settings.")
+            except openai.RateLimitError:
+                raise ValueError("OpenAI API rate limit exceeded. Please try again in a few minutes.")
+            except Exception as e:
+                raise ValueError(f"OpenAI API error: {str(e)}")
 
             # Split the response into plan and resources
-            content = response.output_text
             sections = content.split("SECTION 2 - RECOMMENDED RESOURCES")
             
             if len(sections) != 2:
@@ -85,7 +118,11 @@ class PlannerAgent:
                 estimated_duration=f"Based on {goal.time_commitment} per week commitment"
             )
 
+        except ValueError as e:
+            print(f"Validation error in create_plan: {str(e)}")
+            raise
         except Exception as e:
+            print(f"Unexpected error in create_plan: {str(e)}")
             raise Exception(f"Failed to generate learning plan: {str(e)}")
 
     def _format_resources(self, text: str) -> List[str]:
