@@ -1,0 +1,6 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+Always use the Open AI Responses API here. Do not change it to the Chat Completions API. Open AI has suggested to use that API.https://platform.openai.com/docs/guides/responses-vs-chat-completions
