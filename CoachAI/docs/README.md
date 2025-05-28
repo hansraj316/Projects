@@ -1,9 +1,27 @@
-# CoachAI Learning Wizard 🎓
+# CoachAI Learning Platform 🎓
 
-CoachAI is an intelligent learning path generator that creates personalized learning plans using OpenAI's GPT-4 and web search capabilities. It helps learners create structured, up-to-date learning paths tailored to their goals, current level, and learning style.
+CoachAI is a comprehensive AI-powered learning platform that creates personalized learning plans using OpenAI's GPT-4 API. Available as both a web application and native iOS app, it helps learners create structured, up-to-date learning paths tailored to their goals, current level, and learning style.
+
+## Platform Overview 📱💻
+
+### Web Application
+- 🌐 Streamlit-based web interface
+- 🎯 5-step learning plan wizard
+- 📊 Comprehensive dashboard
+- 💳 Stripe subscription integration
+- 📧 Email notifications
+
+### iOS Application
+- 📱 Native SwiftUI interface
+- 🔄 Onboarding flow for new users
+- 📊 Progress tracking and time logging
+- ⚙️ In-app API key configuration
+- 🌙 Dark/Light mode support
+- 💰 Premium subscription with Stripe integration
 
 ## Features ✨
 
+### Core Features
 - 🎯 Personalized learning plan generation
 - 🌐 Real-time web search integration for current resources
 - 🎨 Learning style adaptation
@@ -12,411 +30,500 @@ CoachAI is an intelligent learning path generator that creates personalized lear
 - 🌙 Dark mode UI for better visibility
 - 📚 Curated resource recommendations
 - 💾 Downloadable learning plans
+- 🔑 OpenAI API key configuration
+
+### Premium Features
 - 💳 Subscription tiers with Stripe integration
 - 📧 Email notifications for premium users
-- 🔑 In-app OpenAI API key configuration
-- 🧠 User learning data persistence
+- 🚀 Unlimited learning plans (vs 1/day for free)
+- 📚 10 resources per plan (vs 3 for free)
+- 🎯 Advanced analytics and progress tracking
+- 🏆 Priority support
 
 ## System Architecture 🏗️
 
-### High-Level Overview
+### High-Level Multi-Platform Architecture
 
 ```mermaid
 graph TD
-    A[User Interface] -->|Input| B[Streamlit App]
-    B -->|Learning Goals| C[PlannerAgent]
-    B -->|Payments| S[StripeAgent]
-    B -->|Notifications| E[EmailAgent]
-    C -->|API Request| D[OpenAI GPT-4]
-    S -->|Payment Processing| P[Stripe API]
-    D -->|Web Search| I[Internet]
-    I -->|Search Results| D
-    D -->|Response| C
-    C -->|Learning Plan| B
-    B -->|Display| A
+    subgraph Client [Client Applications]
+        A [Web App - Streamlit] 
+        B [iOS App - SwiftUI]
+    end
+    
+    subgraph Services [Core Services]
+        C [OpenAI GPT-4 API]
+        D [Stripe Payment API]
+        E [Email Service]
+    end
+    
+    subgraph Storage [Data Storage]
+        F [Local Storage - Web]
+        G [UserDefaults - iOS]
+        H [Supabase - Optional]
+    end
+    
+    A --> C
+    B --> C
+    A --> D
+    B --> D
+    A --> E
+    A --> F
+    B --> G
+    A --> H
+    B --> H
 
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#bbf,stroke:#333,stroke-width:2px
-    style C fill:#dfd,stroke:#333,stroke-width:2px
-    style D fill:#fdd,stroke:#333,stroke-width:2px
-    style E fill:#ddf,stroke:#333,stroke-width:2px
-    style S fill:#ffd,stroke:#333,stroke-width:2px
-    style P fill:#ffa,stroke:#333,stroke-width:2px
-    style I fill:#ddd,stroke:#333,stroke-width:2px
+    style A fill:#bbf
+    style B fill:#f9f
+    style C fill:#fdd
+    style D fill:#ffd
+    style E fill:#ddf
 ```
 
-### Detailed Component Architecture
+### Web Application Architecture
 
 ```mermaid
 graph TB
-    subgraph Frontend
-        A[Streamlit UI] -->|User Input| B[State Management]
-        B -->|Session State| A
+    subgraph Frontend [Web Frontend]
+        A[Streamlit UI]
+        B[State Management]
     end
     
-    subgraph Backend
-        C[PlannerAgent] -->|API Calls| D[OpenAI Client]
-        D -->|Responses| C
-        S[StripeAgent] -->|Payment Processing| P[Stripe API]
-        P -->|Payment Status| S
-        E[EmailAgent] -->|Send Notifications| M[Email Service]
+    subgraph Backend [Web Backend]
+        C[PlannerAgent]
+        D[OpenAI Client]
+        S[StripeAgent]
+        P[Stripe API]
+        E[EmailAgent]
+        M[Email Service]
     end
     
-    subgraph External
-        X[OpenAI API] -->|Web Search| I[Internet]
-        I -->|Results| X
+    subgraph External [External Services]
+        X[OpenAI Chat Completions API]
+        I[Internet]
     end
     
-    B -->|Learning Goals| C
-    B -->|Payment Info| S
-    B -->|Email Requests| E
-    C -->|Learning Plan| B
-    D -->|Requests| X
-    X -->|Responses| D
+    A --> B
+    B --> A
+    C --> D
+    D --> C
+    S --> P
+    P --> S
+    E --> M
+    X --> I
+    I --> X
+    B --> C
+    B --> S
+    B --> E
+    C --> B
+    D --> X
+    X --> D
 
-    style Frontend fill:#f0f0f0,stroke:#333,stroke-width:2px
-    style Backend fill:#e0e0e0,stroke:#333,stroke-width:2px
-    style External fill:#d0d0d0,stroke:#333,stroke-width:2px
+    style Frontend fill:#f0f0f0
+    style Backend fill:#e0e0e0
+    style External fill:#d0d0d0
 ```
 
-## User Flow 🔄
+### iOS Application Architecture
 
 ```mermaid
-sequenceDiagram
-    participant User
-    participant UI as Streamlit UI
-    participant PlanAgent as PlannerAgent
-    participant StripeAgent as StripeAgent
-    participant EmailAgent as EmailAgent
-    participant OpenAI as GPT-4 + Web Search
-    participant Stripe as Stripe API
-    
-    User->>UI: Enter Topic (Step 1)
-    User->>UI: Select Current Level (Step 2)
-    User->>UI: Set Learning Purpose (Step 3)
-    User->>UI: Set Time Commitment (Step 4)
-    User->>UI: Choose Preferred Resources (Step 5)
-    UI->>PlanAgent: Create Learning Goal
-    
-    alt Freemium User
-        Note over UI,PlanAgent: Limited resources (1 plan/day, 3 resources/plan)
-    else Premium User
-        Note over UI,PlanAgent: Full resources (10 plans/day, 10 resources/plan)
+graph TB
+    subgraph AppStructure [iOS App Structure]
+        A[ContentView]
+        B[TabView]
+        C[DashboardView]
+        D[LearningPlanView]
+        E[SettingsView]
+        F[OnboardingView]
+        G[API Key Setup]
+        H[AppState]
+        I[UserDefaults]
+        J[Local Storage]
     end
     
-    PlanAgent->>OpenAI: Generate Plan Request
-    OpenAI-->>PlanAgent: Learning Plan
-    PlanAgent->>OpenAI: Get Resources Request
-    OpenAI-->>PlanAgent: Resource List
-    PlanAgent->>UI: Complete Learning Plan
-    UI->>User: Display Plan
-    UI->>User: Offer Download
+    subgraph iOSServices [iOS Services]
+        K[OpenAIService]
+        L[URLSession]
+        M[StripeService]
+        N[Stripe SDK]
+        O[NotificationService]
+        P[UserNotifications]
+    end
+    
+    subgraph APIs [External APIs]
+        Q[OpenAI Chat Completions]
+        R[Stripe Payments]
+    end
+    
+    A --> B
+    B --> C
+    B --> D
+    B --> E
+    F --> G
+    H --> I
+    H --> J
+    C --> H
+    D --> K
+    E --> M
+    K --> L
+    M --> N
+    O --> P
+    L --> Q
+    M --> R
+
+    style AppStructure fill:#f9f9f9
+    style iOSServices fill:#e9e9e9
+    style APIs fill:#d9d9d9
+```
+
+## API Integration Details 🔌
+
+### OpenAI Chat Completions API
+
+Both platforms now use the correct OpenAI Chat Completions API:
+
+```python
+# Web Application (Python)
+response = client.chat.completions.create(
+    model="gpt-4-turbo-preview",
+    messages=[
+        {"role": "system", "content": "You are a learning plan expert..."},
+        {"role": "user", "content": user_prompt}
+    ],
+    max_tokens=2000,
+    temperature=0.7
+)
+```
+
+```swift
+// iOS Application (Swift)
+let requestBody: [String: Any] = [
+    "model": "gpt-4-turbo-preview",
+    "messages": [
+        ["role": "system", "content": "You are a learning plan expert..."],
+        ["role": "user", "content": userPrompt]
+    ],
+    "max_tokens": 2000,
+    "temperature": 0.7,
+    "response_format": ["type": "json_object"]
+]
+```
+
+### Stripe Integration
+
+```python
+# Web Application
+checkout_session = stripe.checkout.Session.create(
+    success_url="http://localhost:8501/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url="http://localhost:8501/cancel",
+    mode="subscription",
+    line_items=[{"price": "price_premium_monthly", "quantity": 1}]
+)
+```
+
+```swift
+// iOS Application
+// Stripe integration through web views and customer portal
+func initiateStripeSubscription() {
+    // Opens Stripe checkout in web view
+    // Handles subscription status updates
+}
+```
+
+## Platform-Specific Features 📱💻
+
+### Web Application Features
+- **5-Step Wizard**: Guided learning plan creation
+- **Real-time Dashboard**: Progress tracking with charts
+- **Email Delivery**: Send plans via email (Premium)
+- **Downloadable Plans**: PDF/text export
+- **Session Persistence**: Maintains state across browser sessions
+
+### iOS Application Features
+- **Native UI**: SwiftUI interface with iOS design patterns
+- **Onboarding Flow**: Welcome screens and API key setup
+- **Local Storage**: All data stored securely on device
+- **Time Tracking**: Built-in timer and progress logging
+- **Offline Access**: View plans without internet connection
+- **Push Notifications**: Learning reminders (Premium)
+- **Dark Mode**: Automatic theme switching
+
+## User Flow Comparison 🔄
+
+### Web Application Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Streamlit UI
+    participant P as PlannerAgent
+    participant O as GPT-4 Chat API
+    participant S as Stripe API
+    
+    U->>W: Navigate to Learning Plan
+    U->>W: Complete 5-Step Wizard
+    W->>P: Create Learning Goal
+    P->>O: Chat Completions Request
+    O-->>P: Learning Plan Response
+    P->>W: Formatted Plan
+    W->>U: Display Plan + Download
     
     opt Premium Upgrade
-        User->>UI: Request Premium Upgrade
-        UI->>StripeAgent: Create Checkout Session
-        StripeAgent->>Stripe: Payment Request
-        Stripe-->>User: Payment Form
-        User->>Stripe: Complete Payment
-        Stripe-->>StripeAgent: Payment Confirmation
-        StripeAgent-->>UI: Update User Tier
-        UI->>User: Show Success Page
-        UI->>EmailAgent: Send Welcome Email
-        EmailAgent-->>User: Email Confirmation
-    end
-    
-    opt Email Plan (Premium Only)
-        User->>UI: Request Email Delivery
-        UI->>EmailAgent: Send Plan Email
-        EmailAgent-->>User: Learning Plan Email
+        U->>W: Click Upgrade
+        W->>S: Create Checkout Session
+        S-->>U: Payment Form
+        U->>S: Complete Payment
+        S-->>W: Success Webhook
+        W->>U: Premium Features Unlocked
     end
 ```
 
-## Prerequisites 📋
+### iOS Application Flow
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant I as iOS App
+    participant O as GPT-4 Chat API
+    participant S as Stripe Portal
+    
+    U->>I: Open App
+    alt First Time User
+        I->>U: Show Onboarding
+        U->>I: Set API Key
+    end
+    
+    U->>I: Create Learning Plan
+    I->>O: Chat Completions Request
+    O-->>I: JSON Response
+    I->>U: Display Formatted Plan
+    
+    U->>I: Log Learning Time
+    I->>I: Update Local Progress
+    
+    opt Premium Upgrade
+        U->>I: Tap Subscribe
+        I->>S: Open Customer Portal
+        U->>S: Manage Subscription
+        S-->>I: Update Status
+    end
+```
 
-- Python 3.9+
-- OpenAI API key
-- Stripe API key (for subscription features)
-- Streamlit
-- Internet connection for web search functionality
+## Installation & Setup 🚀
 
-## Quick Start 🚀
+### Web Application Setup
 
-### Installation
-
-1. Clone the repository:
+1. **Clone the repository:**
 ```bash
 git clone https://github.com/yourusername/CoachAI.git
 cd CoachAI
 ```
 
-2. Create a virtual environment:
+2. **Create virtual environment:**
 ```bash
 python -m venv venv
 source venv/bin/activate  # Unix
 venv\Scripts\activate     # Windows
 ```
 
-3. Install dependencies:
+3. **Install dependencies:**
 ```bash
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development
 ```
 
-4. Set up your API keys:
+4. **Set up environment variables:**
 ```bash
-# Create a .env file or export directly
 export OPENAI_API_KEY='your-openai-api-key-here'
 export STRIPE_SECRET_KEY='your-stripe-secret-key-here'
 export STRIPE_WEBHOOK_SECRET='your-stripe-webhook-secret-here'
-export SUPABASE_URL='your-supabase-url-here'
-export SUPABASE_KEY='your-supabase-key-here'
 ```
 
-### Usage
-
-1. Start the Streamlit app:
+5. **Run the application:**
 ```bash
 streamlit run ui/web/app.py
 ```
 
-2. Use the intuitive navigation sidebar to move between:
-   - Dashboard: Track your learning progress
-   - Learning Plan: Create personalized learning plans
-   - Settings: Configure API keys and subscription
+### iOS Application Setup
 
-3. Follow the 5-step wizard to create your learning plan:
-   - Step 1: Choose your learning topic
-   - Step 2: Specify your current knowledge level
-   - Step 3: Define your learning purpose
-   - Step 4: Set your time commitment
-   - Step 5: Select preferred learning resources
+1. **Prerequisites:**
+   - Xcode 14.0+
+   - iOS 15.6+ deployment target
+   - Apple Developer Account (for App Store submission)
 
-4. Get your personalized learning plan!
+2. **Open project:**
+```bash
+cd ios/CoachAI
+open CoachAI.xcodeproj
+```
 
-5. Track your learning progress with the comprehensive dashboard:
-   - View estimated vs. actual learning time
-   - Monitor task completion
-   - Log your learning hours
-   - Visualize your progress
+3. **Configure signing:**
+   - Set your Team in project settings
+   - Configure Bundle Identifier
+   - Set up provisioning profiles
 
-6. Upgrade to Premium for additional features:
-   - 10 learning plans per day (vs 1 for free users)
-   - 10 resources per plan (vs 3 for free users)
-   - Email delivery of learning plans
-   - Priority support
+4. **Build and run:**
+   - Select target device/simulator
+   - Press Cmd+R to build and run
 
-7. Configure your OpenAI API key in Settings:
-   - Navigate to the "⚙️ Settings" section in the sidebar
-   - Enter your OpenAI API key
-   - Click "Save API Key"
+5. **App Store preparation:**
+```bash
+# Use the provided build script
+./build_for_appstore.sh
+```
 
-## Development Guide 👩‍💻
-
-### Project Structure 📁
+## Project Structure 📁
 
 ```
 CoachAI/
-├── agents/
-│   ├── planner.py         # Core planning logic and OpenAI integration
-│   ├── email_agent.py     # Email notification handling
-│   └── stripe_agent.py    # Subscription and payment processing
+├── agents/                     # Web app backend logic
+│   ├── planner.py             # Core planning with Chat Completions API
+│   ├── email_agent.py         # Email notification handling
+│   └── stripe_agent.py        # Subscription and payment processing
 ├── ui/
-│   └── web/
-│       ├── app.py         # Streamlit web interface
-│       ├── dashboard.py   # Learning tracking dashboard
-│       ├── theme.py       # Dark mode and UI theming 
-│       └── utils.py       # Helper functions
+│   └── web/                   # Web application
+│       ├── app.py             # Main Streamlit interface
+│       ├── dashboard.py       # Learning tracking dashboard
+│       ├── theme.py           # Dark mode and UI theming 
+│       └── utils.py           # Helper functions
+├── ios/                       # iOS application
+│   └── CoachAI/
+│       ├── CoachAI/
+│       │   ├── Views/         # SwiftUI views
+│       │   │   ├── ContentView.swift
+│       │   │   ├── DashboardView.swift
+│       │   │   ├── LearningPlanView.swift
+│       │   │   ├── SettingsView.swift
+│       │   │   └── OnboardingView.swift
+│       │   ├── ViewModels/    # MVVM architecture
+│       │   ├── Models/        # Data models
+│       │   ├── Services/      # API services
+│       │   └── Resources/     # Assets and configurations
+│       ├── README.md          # iOS-specific documentation
+│       ├── AppStoreMetadata.md # App Store submission details
+│       └── build_for_appstore.sh # Build automation script
 ├── src/
-│   ├── config.py          # Configuration and settings
-│   └── storage.py         # User data persistence
-├── tests/
-│   ├── test_planner.py
-│   ├── test_stripe.py
-│   └── test_ui.py
-└── README.md             # Project documentation
+│   ├── config.py              # Configuration and settings
+│   └── storage.py             # User data persistence
+├── tests/                     # Test suites
+└── README.md                  # This file
 ```
 
-### Component Details
+## API Endpoints & Data Models 📊
 
-#### 1. Streamlit UI Flow
-
-```mermaid
-stateDiagram-v2
-    [*] --> Step1
-    Step1 --> Step2: Topic Selected
-    Step2 --> Step3: Knowledge Level Set
-    Step3 --> Step4: Purpose Set
-    Step4 --> Step5: Time Commitment Set
-    Step5 --> Generation: Resources Chosen
-    Generation --> PlanDisplay: Plan Created
-    PlanDisplay --> [*]: Done
-    
-    state PlanDisplay {
-        [*] --> ShowPlan
-        ShowPlan --> Download: Download Button
-        ShowPlan --> Email: Email Button (Premium)
-        ShowPlan --> Upgrade: Upgrade Button (Freemium)
-        Upgrade --> Payment: Checkout
-        Payment --> Premium: Success
-        Payment --> ShowPlan: Cancel
-    }
-```
-
-#### 2. Core Classes
-
-```mermaid
-classDiagram
-    class BaseModel {
-        <<Pydantic>>
-    }
-    class LearningGoal {
-        +str subject
-        +str level
-        +str current_knowledge
-        +str learning_purpose
-        +str time_commitment
-        +str preferred_resources
-    }
-    class LearningPlan {
-        +str content
-        +List[str] suggested_resources
-        +str estimated_duration
-    }
-    class PlannerAgent {
-        -OpenAI client
-        +create_plan(goal: LearningGoal) LearningPlan
-        -_format_resources(text: str) List[str]
-    }
-    class SubscriptionTier {
-        <<Enum>>
-        FREEMIUM
-        PREMIUM
-    }
-    class SubscriptionConfig {
-        +int daily_plans
-        +int resources_per_plan
-        +bool email_notifications
-        +float price
-        +SubscriptionTier tier
-    }
-    class StripeAgent {
-        -string api_key
-        +tier_configs: Dict
-        +create_checkout_session()
-        +update_subscription_status()
-        +get_tier_features()
-    }
-    class EmailAgent {
-        +send_email()
-        +send_learning_plan_email()
-    }
-
-    BaseModel <|-- LearningGoal
-    BaseModel <|-- LearningPlan
-    PlannerAgent ..> LearningGoal
-    PlannerAgent ..> LearningPlan
-    StripeAgent ..> SubscriptionTier
-    StripeAgent ..> SubscriptionConfig
-```
-
-### API Integration 🔌
-
-#### OpenAI
+### Core Data Models
 
 ```python
-# Example OpenAI Responses API call
-response = client.responses.create(
-    model="gpt-4o",
-    tools=[{"type": "web_search_preview"}],
-    input="Your prompt here"
-)
+# Web Application Models
+class LearningGoal(BaseModel):
+    subject: str
+    level: str
+    current_knowledge: str
+    learning_purpose: str
+    time_commitment: str
+    preferred_resources: List[str]
+
+class LearningPlan(BaseModel):
+    content: str
+    suggested_resources: List[str]
+    estimated_duration: str
+    created_at: datetime
 ```
 
-#### Stripe
+```swift
+// iOS Application Models
+struct LearningPlan: Codable, Identifiable {
+    let id = UUID()
+    let topic: String
+    let timeline: String
+    let format: PlanFormat
+    let content: String
+    let resources: [Resource]
+    let estimatedHours: Double
+    let createdAt: Date
+}
 
-```python
-# Example Stripe checkout session creation
-checkout_session = stripe.checkout.Session.create(
-    success_url="http://localhost:8501/success?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url="http://localhost:8501/cancel",
-    mode="subscription",
-    line_items=[{"price": "price_id", "quantity": 1}]
-)
+struct Resource: Codable, Identifiable {
+    let id = UUID()
+    let title: String
+    let url: String
+    let type: ResourceType
+    let description: String
+}
 ```
 
-### Session State Management
+### Subscription Tiers
 
-The application uses Streamlit's session state for maintaining user data across steps:
+| Feature | Freemium | Premium ($9.99/month) |
+|---------|----------|----------------------|
+| Learning Plans/Day | 1 | Unlimited |
+| Resources per Plan | 3 | 10 |
+| Email Notifications | ❌ | ✅ |
+| Progress Analytics | Basic | Advanced |
+| Priority Support | ❌ | ✅ |
+| Offline Access (iOS) | ✅ | ✅ |
+| Time Tracking | ✅ | ✅ |
 
-```python
-# Session state initialization
-if "step" not in st.session_state:
-    st.session_state.step = 1
+## Development Guidelines 👩‍💻
 
-if "subject" not in st.session_state:
-    st.session_state.subject = ""
+### Web Application Development
 
-# Form handling with session state
-subject_value = st.session_state.get("subject", "")
-subject = st.text_input("Subject or Topic", value=subject_value)
+1. **Code Style:**
+   - Follow PEP 8
+   - Use type hints
+   - Google-style docstrings
 
-# Storing values in session state
-if st.button("Next"):
-    st.session_state["subject"] = subject
-    next_step()
-```
-
-### Webhook Handling
-
-For handling Stripe webhooks, we use a dedicated endpoint in the Streamlit app:
-
-```python
-async def handle_webhook():
-    """Handle incoming Stripe webhook events."""
-    # Verify webhook signature
-    # Process different event types like 'checkout.session.completed'
-    # Update user subscription status
-```
-
-### Code Style 📝
-
-We follow PEP 8 with these additions:
-- Line length: 88 characters (Black formatter)
-- Docstring style: Google format
-- Type hints: Required for all functions
-
-Example:
-```python
-def process_data(input_data: str) -> Dict[str, Any]:
-    """Process the input data and return results.
-
-    Args:
-        input_data: The raw input string to process.
-
-    Returns:
-        Dict containing processed results.
-
-    Raises:
-        ValueError: If input_data is invalid.
-    """
-    pass
-```
-
-### Testing 🧪
-
-Run tests with:
+2. **Testing:**
 ```bash
 pytest tests/                    # Run all tests
 pytest tests/ -v --cov=src      # With coverage
-pytest tests/integration/       # Integration tests
 ```
 
-### Deployment 🚀
+### iOS Application Development
 
-#### Production Setup
+1. **Code Style:**
+   - Follow Swift API Design Guidelines
+   - Use SwiftUI best practices
+   - MVVM architecture pattern
 
-1. Environment variables:
+2. **Testing:**
+```bash
+# Run from Xcode
+Cmd+U  # Run unit tests
+```
+
+3. **App Store Submission:**
+```bash
+# Use provided script
+./ios/CoachAI/build_for_appstore.sh
+```
+
+## Security & Privacy 🔒
+
+### Data Handling
+- **Web App**: Session-based storage, optional Supabase integration
+- **iOS App**: Local storage only, encrypted API keys
+- **API Keys**: User-provided, stored securely
+- **Payments**: Processed through Stripe (PCI compliant)
+
+### Privacy Features
+- No personal data collection without consent
+- Local-first approach on iOS
+- Optional analytics (can be disabled)
+- GDPR compliant data handling
+
+## Deployment 🚀
+
+### Web Application Deployment
+
+**Docker:**
+```dockerfile
+FROM python:3.9-slim
+WORKDIR /app
+COPY . .
+RUN pip install -r requirements.txt
+EXPOSE 8501
+CMD ["streamlit", "run", "ui/web/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+```
+
+**Environment Variables:**
 ```bash
 OPENAI_API_KEY=your-key-here
 STRIPE_SECRET_KEY=your-stripe-key-here
@@ -424,89 +531,95 @@ STRIPE_WEBHOOK_SECRET=your-webhook-secret-here
 STREAMLIT_SERVER_PORT=8501
 ```
 
-2. Docker deployment:
-```dockerfile
-FROM python:3.9-slim
-WORKDIR /app
-COPY . .
-RUN pip install -r requirements.txt
-CMD ["streamlit", "run", "ui/web/app.py"]
-```
+### iOS Application Deployment
 
-### Best Practices 🎯
+**App Store Connect:**
+1. Archive the app in Xcode
+2. Upload to App Store Connect
+3. Complete app metadata
+4. Submit for review
 
-1. Performance Optimization:
-   - Cache frequent API requests
-   - Implement rate limiting
-   - Monitor memory usage
-   - Handle concurrent users
+**TestFlight:**
+1. Upload build to App Store Connect
+2. Add internal/external testers
+3. Distribute beta versions
 
-2. Security:
-   - Use environment variables for secrets
-   - Implement key rotation
-   - Sanitize inputs
-   - Validate form data before submission
-   - Verify webhook signatures
+## Troubleshooting 🔍
 
-### Troubleshooting 🔍
+### Common Issues
 
-1. OpenAI API Issues:
-   - Verify API key and format
-   - Check rate limits
-   - Monitor usage
-   - Use the in-app API key configuration if needed
+1. **OpenAI API Issues:**
+   - Verify API key format (starts with 'sk-')
+   - Check rate limits and usage
+   - Ensure Chat Completions API endpoint is used
 
-2. Stripe API Issues:
-   - Validate API keys
-   - Check webhook configuration
-   - Ensure correct product/price setup
+2. **iOS Build Issues:**
+   - Check iOS deployment target (15.6+)
+   - Verify signing certificates
+   - Ensure all dependencies are resolved
+
+3. **Stripe Integration:**
+   - Validate webhook endpoints
+   - Check product/price configuration
    - Test with Stripe CLI
 
-3. Streamlit Issues:
-   - Clear cache: `streamlit cache clear`
-   - Check port conflicts
-   - Verify session state initialization
-   - Check for widget key conflicts
+## Recent Updates 🆕
 
-4. Form Data Issues:
-   - Ensure all input validation is in place
-   - Check for empty string values in session state
-   - Validate selections against available options
-   - Use defensive programming for all form inputs
+### Version 2.0 (Current)
+- ✅ Added native iOS application
+- ✅ Migrated to OpenAI Chat Completions API
+- ✅ Enhanced subscription management
+- ✅ Improved error handling and retry logic
+- ✅ Added comprehensive onboarding flow
+- ✅ Implemented local data storage for iOS
 
-## Recent Improvements 🆕
-
-- 🔧 Enhanced session state management to maintain data between steps
-- 🛠️ Improved form validation and error handling
-- 🔐 Added in-app OpenAI API key configuration
-- 🔍 Better debugging for API connections 
-- 🧪 Fixed handling of multiselect values between steps
-- 🔄 Better loading indicators and error messages
+### Version 1.0
+- ✅ Initial web application release
+- ✅ Basic learning plan generation
+- ✅ Stripe subscription integration
+- ✅ Email notifications
 
 ## Contributing 🤝
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+2. Create feature branch (`git checkout -b feature/AmazingFeature`)
 3. Write tests and documentation
-4. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-5. Push to the branch (`git push origin feature/AmazingFeature`)
-6. Open a Pull Request
+4. Commit changes (`git commit -m 'Add AmazingFeature'`)
+5. Push to branch (`git push origin feature/AmazingFeature`)
+6. Open Pull Request
+
+### Development Setup
+
+**Web Development:**
+```bash
+pip install -r requirements-dev.txt
+pre-commit install
+```
+
+**iOS Development:**
+- Install Xcode 14.0+
+- Install SwiftLint for code quality
+- Follow iOS Human Interface Guidelines
 
 ## License 📄
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
+## Support 💪
+
+- 📧 Email: support@coachai.app
+- 🐛 Issues: GitHub Issues
+- 📖 Documentation: This README and inline docs
+- 💬 Discussions: GitHub Discussions
+
 ## Acknowledgments 🙏
 
 - OpenAI for their powerful GPT-4 API
-- Stripe for payment processing
+- Stripe for secure payment processing
 - Streamlit for the amazing web framework
+- Apple for SwiftUI and iOS development tools
 - All contributors and users of CoachAI
-
-## Support 💪
-
-For support, please open an issue in the GitHub repository or contact the maintainers.
 
 ---
 
-Made with ❤️ by [Hansraj] 
+Made with ❤️ for learners everywhere 
