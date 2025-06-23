@@ -1,0 +1,29 @@
+[blog_workflow]
+enabled = true
+purpose = "vibe_coding_story_capture"
+session_directory = "docs/blog_content/research/raw_notes"
+assets_directory = "docs/blog_content/assets"
+
+[content_focus]
+narrative_capture = true
+technical_storytelling = true
+ai_interaction_analysis = true
+development_journey_documentation = true
+
+[auto_triggers]
+interesting_moments = true
+breakthrough_captures = true
+challenge_documentation = true
+solution_journeys = true
+
+[blog_assets]
+screenshot_automation = true
+code_example_extraction = true
+prompt_chain_preservation = true
+workflow_diagram_generation = true
+
+[publication_prep]
+content_categorization = true
+readability_optimization = true
+technical_accuracy_check = true
+narrative_flow_analysis = true 

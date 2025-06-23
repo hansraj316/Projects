@@ -17,19 +17,21 @@ struct DashboardView: View {
     }
     
     var body: some View {
-        NavigationView {
+        ZStack {
+            // Background with subtle gradient
+            LinearGradient(
+                colors: [.clear, .blue.opacity(0.05), .purple.opacity(0.03)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
             ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    Text("Learning Dashboard")
-                        .font(.largeTitle)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                    // Progress Overview
-                    VStack(spacing: 15) {
+                LazyVStack(spacing: 24) {
+                    // Progress Overview with Liquid Glass cards
+                    VStack(spacing: 16) {
                         HStack {
-                            ProgressCard(
+                            LiquidGlassProgressCard(
                                 title: "Today",
                                 value: String(format: "%.1f", viewModel.timeSpentToday),
                                 unit: "hours",
@@ -37,7 +39,7 @@ struct DashboardView: View {
                                 color: .blue
                             )
                             
-                            ProgressCard(
+                            LiquidGlassProgressCard(
                                 title: "Total",
                                 value: String(format: "%.1f", viewModel.totalTimeSpent),
                                 unit: "hours",
@@ -49,9 +51,10 @@ struct DashboardView: View {
                         if let selectedPlan = viewModel.selectedPlanId,
                            let plan = viewModel.learningPlans.first(where: { $0.id == selectedPlan }) {
                             
-                            VStack(alignment: .leading, spacing: 10) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 Text(plan.subject)
                                     .font(.headline)
+                                    .foregroundColor(.primary)
                                 
                                 ProgressView(value: viewModel.completionPercentage, total: 100)
                                     .progressViewStyle(LinearProgressViewStyle(tint: .green))
@@ -72,18 +75,26 @@ struct DashboardView: View {
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            .padding()
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(10)
+                            .padding(16)
+                            .background {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                                    }
+                            }
                         }
                     }
-                    .padding(.horizontal)
+                    .padding(.horizontal, 20)
                     
-                    // Learning Plans
-                    VStack(alignment: .leading, spacing: 10) {
+                    // Learning Plans Section
+                    VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Text("Your Learning Plans")
                                 .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
                             
                             Spacer()
                             
@@ -91,24 +102,26 @@ struct DashboardView: View {
                                 Button(action: {
                                     viewModel.showAllPlans = true
                                 }) {
-                                    HStack(spacing: 4) {
+                                    HStack(spacing: 6) {
                                         Text("View All")
                                         Image(systemName: "chevron.right")
+                                            .font(.caption)
                                     }
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
                                 }
+                                .liquidGlassButton(size: .small)
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                         
                         if viewModel.learningPlans.isEmpty {
-                            EmptyStateView(message: "No learning plans yet. Create one in the Learning Plan tab!")
+                            LiquidGlassEmptyStateView(message: "No learning plans yet. Create one in the Learning Plan tab!")
                         } else {
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 15) {
+                                HStack(spacing: 16) {
                                     ForEach(viewModel.learningPlans) { plan in
-                                        PlanCard(
+                                        LiquidGlassPlanCard(
                                             plan: plan,
                                             isSelected: viewModel.selectedPlanId == plan.id
                                         )
@@ -117,20 +130,24 @@ struct DashboardView: View {
                                         }
                                     }
                                 }
-                                .padding(.horizontal)
+                                .padding(.horizontal, 20)
                             }
                         }
                     }
                     
-                    // Time Logging
-                    VStack(alignment: .leading, spacing: 10) {
+                    // Time Logging Section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Log Your Learning Time")
                             .font(.title2)
-                            .padding(.horizontal)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 20)
                         
-                        VStack {
+                        VStack(spacing: 16) {
                             HStack {
                                 Text("Hours spent:")
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
                                 
                                 Spacer()
                                 
@@ -140,61 +157,88 @@ struct DashboardView: View {
                                     step: 0.5
                                 ) {
                                     Text("\(viewModel.hoursToLog, specifier: "%.1f")")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
                                         .frame(width: 50)
+                                        .foregroundColor(.primary)
                                 }
                             }
                             
                             TextField("Notes (optional)", text: $viewModel.logNotes)
-                                .textFieldStyle(RoundedBorderTextFieldStyle())
-                                .padding(.vertical, 5)
+                                .padding(12)
+                                .background {
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(.ultraThinMaterial)
+                                        .overlay {
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                                        }
+                                }
                             
                             Button(action: viewModel.logTime) {
                                 Text("Log Time")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(Color.blue)
+                                    .padding(14)
+                                    .background {
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(.blue)
+                                    }
                                     .foregroundColor(.white)
-                                    .cornerRadius(8)
                             }
                             .disabled(viewModel.hoursToLog <= 0 || viewModel.selectedPlanId == nil || viewModel.isLoading)
+                            .opacity(viewModel.hoursToLog <= 0 || viewModel.selectedPlanId == nil || viewModel.isLoading ? 0.6 : 1.0)
                         }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(10)
-                        .padding(.horizontal)
+                        .padding(20)
+                        .background {
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(.ultraThinMaterial)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                                }
+                        }
+                        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                        .padding(.horizontal, 20)
                     }
                     
-                    // Recent Activity
-                    VStack(alignment: .leading, spacing: 10) {
+                    // Recent Activity Section
+                    VStack(alignment: .leading, spacing: 16) {
                         Text("Recent Activity")
                             .font(.title2)
-                            .padding(.horizontal)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 20)
                         
                         if viewModel.getTimeLogsForCurrentPlan().isEmpty {
-                            EmptyStateView(message: "No activity logged for the selected plan yet.")
+                            LiquidGlassEmptyStateView(message: "No activity logged for the selected plan yet.")
                         } else {
-                            ForEach(viewModel.getTimeLogsForCurrentPlan().prefix(5)) { log in
-                                TimeLogRow(log: log)
+                            VStack(spacing: 12) {
+                                ForEach(viewModel.getTimeLogsForCurrentPlan().prefix(5)) { log in
+                                    LiquidGlassTimeLogRow(log: log)
+                                }
                             }
+                            .padding(.horizontal, 20)
                         }
                     }
                 }
-                .padding(.vertical)
+                .padding(.vertical, 20)
             }
-            .navigationBarHidden(true)
-            .onAppear {
-                viewModel.loadData()
-            }
-            .alert(item: Binding<AlertItem?>(
-                get: { viewModel.error != nil ? AlertItem(message: viewModel.error!) : nil },
-                set: { _ in viewModel.error = nil }
-            )) { alertItem in
-                Alert(
-                    title: Text("Error"),
-                    message: Text(alertItem.message),
-                    dismissButton: .default(Text("OK"))
-                )
-            }
+        }
+        .onAppear {
+            viewModel.loadData()
+        }
+        .alert(item: Binding<AlertItem?>(
+            get: { viewModel.error != nil ? AlertItem(message: viewModel.error!) : nil },
+            set: { _ in viewModel.error = nil }
+        )) { alertItem in
+            Alert(
+                title: Text("Error"),
+                message: Text(alertItem.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
             .sheet(isPresented: $viewModel.showAllPlans) {
                 NavigationView {
                     VStack {
@@ -255,11 +299,10 @@ struct DashboardView: View {
             }
         }
     }
-}
 
-// Helper Views
+// MARK: - Liquid Glass Components
 
-struct ProgressCard: View {
+struct LiquidGlassProgressCard: View {
     var title: String
     var value: String
     var unit: String
@@ -267,67 +310,221 @@ struct ProgressCard: View {
     var color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Image(systemName: iconName)
-                    .foregroundColor(color)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.2))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: iconName)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(color)
+                }
+                
                 Text(title)
                     .font(.caption)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
+                
+                Spacer()
             }
             
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(value)
                     .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
                 
                 Text(unit)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
-        .padding()
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(10)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 }
 
-struct PlanCard: View {
+struct LiquidGlassPlanCard: View {
     var plan: LearningPlan
     var isSelected: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(plan.subject)
-                .font(.headline)
-                .lineLimit(1)
+        VStack(alignment: .leading, spacing: 12) {
+            // Header with icon
+            HStack {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.blue.opacity(0.2))
+                        .frame(width: 32, height: 32)
+                    
+                    Image(systemName: "book.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.blue)
+                }
+                
+                Spacer()
+                
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+                }
+            }
             
-            Text(plan.level)
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Content
+            VStack(alignment: .leading, spacing: 6) {
+                Text(plan.subject)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+                    .foregroundColor(.primary)
+                
+                Text(plan.level)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             
             Spacer()
             
+            // Footer
             HStack {
                 let estimatedHours = plan.estimatedHours.isFinite ? plan.estimatedHours : 0.0
-                Text("Est: \(String(format: "%.1f", estimatedHours)) hrs")
+                Text("\(String(format: "%.0f", estimatedHours)) hrs")
                     .font(.caption)
+                    .fontWeight(.medium)
                     .foregroundColor(.secondary)
                 
                 Spacer()
                 
                 Image(systemName: "clock.fill")
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
         }
-        .padding()
-        .frame(width: 150, height: 120)
-        .background(isSelected ? Color.blue.opacity(0.2) : Color(.secondarySystemBackground))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-        )
+        .padding(16)
+        .frame(width: 160, height: 140)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(isSelected ? .blue.opacity(0.6) : .white.opacity(0.2), lineWidth: isSelected ? 2 : 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .scaleEffect(isSelected ? 1.02 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isSelected)
+    }
+}
+
+struct LiquidGlassEmptyStateView: View {
+    let message: String
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(.blue.opacity(0.1))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "doc.text")
+                    .font(.system(size: 32, weight: .medium))
+                    .foregroundColor(.blue)
+            }
+            
+            VStack(spacing: 8) {
+                Text("No learning plans yet")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+            }
+        }
+        .padding(24)
+        .background {
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+        .padding(.horizontal, 20)
+    }
+}
+
+struct LiquidGlassTimeLogRow: View {
+    let log: TimeLog
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Time indicator
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.green.opacity(0.2))
+                    .frame(width: 32, height: 32)
+                
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.green)
+            }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(DateFormatter.relativeDateFormatter.string(from: log.timestamp))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                if let notes = log.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            
+            Spacer()
+            
+            // Hours display
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("\(log.hours, specifier: "%.1f")")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                
+                Text("hours")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(16)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -371,57 +568,9 @@ struct DashboardPlanCard: View {
     }
 }
 
-struct TimeLogRow: View {
-    var log: TimeLog
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(DateFormatter.relativeDateFormatter.string(from: log.timestamp))
-                    .font(.subheadline)
-                
-                if let notes = log.notes {
-                    Text(notes)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            
-            Spacer()
-            
-            Text("\(log.hours, specifier: "%.1f") hours")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(8)
-        .padding(.horizontal)
-    }
-}
+// Old TimeLogRow removed - using LiquidGlassTimeLogRow instead
 
-struct EmptyStateView: View {
-    var message: String
-    
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "doc.text")
-                .font(.system(size: 40))
-                .foregroundColor(.gray)
-            
-            Text(message)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(10)
-        .padding(.horizontal)
-    }
-}
+// Old EmptyStateView removed - using LiquidGlassEmptyStateView instead
 
 struct AlertItem: Identifiable {
     var id = UUID()

@@ -4,114 +4,144 @@ import Network
 
 struct LearningPlanView: View {
     @EnvironmentObject private var appState: AppState
-    @StateObject private var viewModel: LearningPlanViewModel
+    @StateObject private var viewModel = LearningPlanViewModel(apiService: APIService(), storeService: StoreService())
     @State private var isConnected = true
     
     // Store the network monitor in a class-based wrapper instead of directly in the struct
     private let networkMonitorWrapper = NetworkMonitorWrapper()
     
-    init() {
-        let apiService = APIService()
-        let storeService = StoreService()
-        _viewModel = StateObject(wrappedValue: LearningPlanViewModel(apiService: apiService, storeService: storeService))
-    }
-    
     var body: some View {
-        NavigationView {
+        ZStack {
+            // Background with subtle gradient
+            LinearGradient(
+                colors: [.clear, .blue.opacity(0.05), .purple.opacity(0.03)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+            
             ScrollView {
-                VStack(spacing: 20) {
-                    // Header
-                    Text(viewModel.learningPlan == nil ? "Create Learning Plan" : "Your Learning Plan")
-                        .font(.largeTitle)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                    
-                    // Network status alert
+                LazyVStack(spacing: 24) {
+                    // Network status alert with Liquid Glass
                     if !isConnected {
-                        HStack {
+                        HStack(spacing: 12) {
                             Image(systemName: "wifi.slash")
+                                .font(.title3)
                             Text("No internet connection. Please check your network settings.")
+                                .font(.subheadline)
                         }
                         .foregroundColor(.white)
-                        .padding()
-                        .background(Color.red)
-                        .cornerRadius(8)
-                        .padding(.horizontal)
+                        .padding(16)
+                        .background {
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(.red)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(.white.opacity(0.3), lineWidth: 1)
+                                }
+                        }
+                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                        .padding(.horizontal, 20)
                     }
                     
                     if viewModel.learningPlan == nil {
-                        // Wizard steps
-                        StepIndicator(currentStep: viewModel.currentStep)
-                            .padding(.horizontal)
+                        // Wizard steps with Liquid Glass
+                        LiquidGlassStepIndicator(currentStep: viewModel.currentStep)
+                            .padding(.horizontal, 20)
                         
-                        // Current step content - Better mobile layout
+                        // Current step content with Liquid Glass
                         stepContent
-                            .padding(20)
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(16)
-                            .padding(.horizontal)
+                            .padding(24)
+                            .background {
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(.ultraThinMaterial)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                                    }
+                            }
+                            .shadow(color: .black.opacity(0.05), radius: 12, x: 0, y: 6)
+                            .padding(.horizontal, 20)
                         
-                        // Navigation buttons - Improved mobile layout
-                        VStack(spacing: 12) {
+                        // Navigation buttons with Liquid Glass
+                        VStack(spacing: 16) {
                             if viewModel.currentStep < 5 {
                                 Button(action: viewModel.nextStep) {
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         Text("Continue")
+                                            .fontWeight(.semibold)
                                         Image(systemName: "chevron.right")
+                                            .font(.caption)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(16)
-                                    .background(Color.blue)
+                                    .background {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(.blue)
+                                    }
                                     .foregroundColor(.white)
-                                    .cornerRadius(12)
+                                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                                 }
                             } else {
                                 Button(action: viewModel.generatePlan) {
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "sparkles")
                                         Text("Generate My Learning Plan")
+                                            .fontWeight(.semibold)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(16)
-                                    .background(Color.blue)
+                                    .background {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(.blue)
+                                    }
                                     .foregroundColor(.white)
-                                    .cornerRadius(12)
+                                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                                 }
                             }
                             
                             if viewModel.currentStep > 1 {
                                 Button(action: viewModel.previousStep) {
-                                    HStack {
+                                    HStack(spacing: 8) {
                                         Image(systemName: "chevron.left")
+                                            .font(.caption)
                                         Text("Back")
+                                            .fontWeight(.medium)
                                     }
                                     .frame(maxWidth: .infinity)
-                                    .padding(12)
-                                    .background(Color.gray.opacity(0.15))
+                                    .padding(14)
+                                    .background {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(.ultraThinMaterial)
+                                            .overlay {
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(.white.opacity(0.2), lineWidth: 1)
+                                            }
+                                    }
                                     .foregroundColor(.primary)
-                                    .cornerRadius(12)
+                                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
                                 }
                             }
                         }
-                        .padding(.horizontal)
+                        .padding(.horizontal, 20)
                     } else {
                         // Display generated plan with improved mobile layout
                         generatedPlanView
                     }
                 }
-                .padding(.vertical)
+                .padding(.vertical, 20)
             }
-            .navigationBarHidden(true)
-            .alert(item: Binding<AlertItem?>(
-                get: { viewModel.error != nil ? AlertItem(message: viewModel.error!) : nil },
-                set: { _ in viewModel.error = nil }
-            )) { alertItem in
-                Alert(
-                    title: Text("Error"),
-                    message: Text(alertItem.message),
-                    dismissButton: .default(Text("OK"))
-                )
-            }
+        }
+        .alert(item: Binding<AlertItem?>(
+            get: { viewModel.error != nil ? AlertItem(message: viewModel.error!) : nil },
+            set: { _ in viewModel.error = nil }
+        )) { alertItem in
+            Alert(
+                title: Text("Error"),
+                message: Text(alertItem.message),
+                dismissButton: .default(Text("OK"))
+            )
+        }
             .overlay(Group {
                 if viewModel.isLoading {
                     LoadingView()
@@ -309,48 +339,10 @@ struct LearningPlanView: View {
             }
         }
     }
-}
 
 // Helper Views
 
-struct StepIndicator: View {
-    var currentStep: Int
-    let totalSteps = 5
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                ForEach(1...totalSteps, id: \.self) { step in
-                    ZStack {
-                        Circle()
-                            .frame(width: 32, height: 32)
-                            .foregroundColor(step <= currentStep ? .blue : .gray.opacity(0.2))
-                        
-                        if step <= currentStep {
-                            Image(systemName: step == currentStep ? "\(step).circle.fill" : "checkmark")
-                                .foregroundColor(.white)
-                                .font(.system(size: step == currentStep ? 16 : 12))
-                        } else {
-                            Text("\(step)")
-                                .foregroundColor(.gray)
-                                .font(.system(size: 14))
-                        }
-                    }
-                    
-                    if step < totalSteps {
-                        Rectangle()
-                            .frame(height: 2)
-                            .foregroundColor(step < currentStep ? .blue : .gray.opacity(0.3))
-                    }
-                }
-            }
-            
-            Text("Step \(currentStep) of \(totalSteps)")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-}
+// Old StepIndicator removed - using LiquidGlassStepIndicator instead
 
 struct PlanDetailView: View {
     var plan: LearningPlan
@@ -750,4 +742,85 @@ struct PlanDetailSheetContent: View {
             .padding(.vertical)
         }
     }
-} 
+}
+
+struct AlertItem: Identifiable {
+    var id = UUID()
+    var message: String
+}
+
+// MARK: - Liquid Glass Step Indicator
+struct LiquidGlassStepIndicator: View {
+    let currentStep: Int
+    let totalSteps = 5
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Progress bar
+            HStack(spacing: 8) {
+                ForEach(1...totalSteps, id: \.self) { step in
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(step <= currentStep ? .blue : .gray.opacity(0.3))
+                        .frame(height: 6)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentStep)
+                }
+            }
+            
+            // Step info
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Step \(currentStep) of \(totalSteps)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    Text(stepTitle(currentStep))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
+                
+                Spacer()
+                
+                ZStack {
+                    Circle()
+                        .fill(.blue.opacity(0.2))
+                        .frame(width: 40, height: 40)
+                    
+                    Text("\(currentStep)")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.blue)
+                }
+            }
+        }
+        .padding(20)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(.white.opacity(0.2), lineWidth: 1)
+                }
+        }
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+    }
+    
+    private func stepTitle(_ step: Int) -> String {
+        switch step {
+        case 1: return "Subject or Topic"
+        case 2: return "Current Level"
+        case 3: return "Learning Purpose"
+        case 4: return "Time Commitment"
+        case 5: return "Preferred Resources"
+        default: return "Setup"
+        }
+    }
+}
+
+struct LearningPlanView_Previews: PreviewProvider {
+    static var previews: some View {
+        LearningPlanView()
+            .environmentObject(AppState())
+    }
+}

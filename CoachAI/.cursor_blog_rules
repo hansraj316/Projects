@@ -1,0 +1,37 @@
+{
+  "blog_workflow": {
+    "enabled": true,
+    "purpose": "vibe_coding_documentation",
+    "session_directory": "docs/blog_content/research/raw_notes",
+    "assets_directory": "docs/blog_content/assets",
+    "focus": "blog_publication"
+  },
+  "capture_settings": {
+    "vibe_moments": true,
+    "ai_breakthroughs": true,
+    "prompt_evolution": true,
+    "development_insights": true,
+    "quotable_moments": true,
+    "demo_opportunities": true
+  },
+  "content_triggers": {
+    "on_interesting_ai_response": "capture_for_blog",
+    "on_breakthrough_moment": "mark_as_blog_worthy", 
+    "on_challenge_overcome": "document_solution_journey",
+    "on_unexpected_result": "capture_surprise_moment"
+  },
+  "blog_categories": [
+    "vibe_coding_philosophy",
+    "prompt_engineering_tips", 
+    "ai_collaboration_patterns",
+    "development_productivity",
+    "technical_insights",
+    "human_ai_dynamics"
+  ],
+  "auto_capture": {
+    "screenshots_on_breakthrough": true,
+    "code_snippets_on_success": true,
+    "prompt_chains_on_evolution": true,
+    "error_solutions_on_resolution": true
+  }
+} 
