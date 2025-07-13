@@ -1,0 +1,411 @@
+"""
+Database operations for InterviewAgent
+"""
+
+from typing import List, Optional, Dict, Any
+import logging
+from datetime import datetime, timedelta
+import uuid
+
+from .connection import get_supabase_client
+from .models import (
+    User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
+    dict_to_model, model_to_dict,
+    ApplicationStatus, JobStatus, AgentStatus
+)
+
+logger = logging.getLogger(__name__)
+
+class DatabaseOperations:
+    """Database operations manager"""
+    
+    def __init__(self):
+        try:
+            self.client = get_supabase_client()
+        except Exception as e:
+            logger.warning(f"Failed to connect to Supabase, using mock mode: {str(e)}")
+            self.client = None
+    
+    # User operations
+    def get_or_create_user(self, email: str, full_name: str = None) -> User:
+        """Get existing user or create new one (for single-user MVP)"""
+        
+        # Mock user for testing
+        if self.client is None:
+            return User(
+                id=str(uuid.uuid4()),
+                email=email,
+                full_name=full_name or "Test User",
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+        
+        try:
+            # Try to get existing user
+            result = self.client.table('users').select('*').eq('email', email).execute()
+            
+            if result.data:
+                return dict_to_model(result.data[0], User)
+            
+            # Create new user
+            user_data = {
+                'id': str(uuid.uuid4()),
+                'email': email,
+                'full_name': full_name,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            result = self.client.table('users').insert(user_data).execute()
+            return dict_to_model(result.data[0], User)
+            
+        except Exception as e:
+            logger.error(f"Failed to get/create user: {str(e)}")
+            raise
+    
+    # Resume operations
+    def create_resume_template(self, user_id: str, name: str, content: str, 
+                             file_url: str = None, is_default: bool = False) -> ResumeTemplate:
+        """Create new resume template"""
+        try:
+            resume_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'name': name,
+                'content': content,
+                'file_url': file_url,
+                'is_default': is_default,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            result = self.client.table('resume_templates').insert(resume_data).execute()
+            return dict_to_model(result.data[0], ResumeTemplate)
+            
+        except Exception as e:
+            logger.error(f"Failed to create resume template: {str(e)}")
+            raise
+    
+    def get_resume_templates(self, user_id: str) -> List[ResumeTemplate]:
+        """Get all resume templates for user"""
+        try:
+            result = self.client.table('resume_templates').select('*').eq('user_id', user_id).execute()
+            return [dict_to_model(item, ResumeTemplate) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get resume templates: {str(e)}")
+            return []
+    
+    def update_resume_template(self, resume_id: str, **kwargs) -> bool:
+        """Update resume template"""
+        try:
+            kwargs['updated_at'] = datetime.now().isoformat()
+            result = self.client.table('resume_templates').update(kwargs).eq('id', resume_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to update resume template: {str(e)}")
+            return False
+    
+    def delete_resume_template(self, resume_id: str) -> bool:
+        """Delete resume template"""
+        try:
+            result = self.client.table('resume_templates').delete().eq('id', resume_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to delete resume template: {str(e)}")
+            return False
+    
+    # Job site operations
+    def create_job_site(self, user_id: str, name: str, url: str, 
+                       credentials_encrypted: str = None) -> JobSite:
+        """Create new job site configuration"""
+        try:
+            site_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'name': name,
+                'url': url,
+                'is_enabled': True,
+                'credentials_encrypted': credentials_encrypted,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat()
+            }
+            
+            result = self.client.table('job_sites').insert(site_data).execute()
+            return dict_to_model(result.data[0], JobSite)
+            
+        except Exception as e:
+            logger.error(f"Failed to create job site: {str(e)}")
+            raise
+    
+    def get_job_sites(self, user_id: str, enabled_only: bool = False) -> List[JobSite]:
+        """Get job sites for user"""
+        
+        # Mock job sites for testing
+        if self.client is None:
+            mock_sites = []
+            sites_data = [
+                ("LinkedIn", "https://linkedin.com/jobs"),
+                ("Indeed", "https://indeed.com"),
+                ("Glassdoor", "https://glassdoor.com")
+            ]
+            
+            for name, url in sites_data:
+                mock_sites.append(JobSite(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    name=name,
+                    url=url,
+                    is_enabled=True,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now()
+                ))
+            return mock_sites
+        
+        try:
+            query = self.client.table('job_sites').select('*').eq('user_id', user_id)
+            if enabled_only:
+                query = query.eq('is_enabled', True)
+            
+            result = query.execute()
+            return [dict_to_model(item, JobSite) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get job sites: {str(e)}")
+            return []
+    
+    def update_job_site(self, site_id: str, **kwargs) -> bool:
+        """Update job site configuration"""
+        try:
+            kwargs['updated_at'] = datetime.now().isoformat()
+            result = self.client.table('job_sites').update(kwargs).eq('id', site_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to update job site: {str(e)}")
+            return False
+    
+    # Job listing operations
+    def create_job_listing(self, job_site_id: str, title: str, company: str, 
+                          job_url: str, **kwargs) -> JobListing:
+        """Create new job listing"""
+        try:
+            job_data = {
+                'id': str(uuid.uuid4()),
+                'job_site_id': job_site_id,
+                'title': title,
+                'company': company,
+                'job_url': job_url,
+                'status': JobStatus.DISCOVERED.value,
+                'scraped_at': datetime.now().isoformat(),
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('job_listings').insert(job_data).execute()
+            return dict_to_model(result.data[0], JobListing)
+            
+        except Exception as e:
+            logger.error(f"Failed to create job listing: {str(e)}")
+            raise
+    
+    def get_job_listings(self, job_site_id: str = None, status: JobStatus = None, 
+                        limit: int = None) -> List[JobListing]:
+        """Get job listings with optional filtering"""
+        try:
+            query = self.client.table('job_listings').select('*')
+            
+            if job_site_id:
+                query = query.eq('job_site_id', job_site_id)
+            if status:
+                query = query.eq('status', status.value)
+            if limit:
+                query = query.limit(limit)
+                
+            query = query.order('created_at', desc=True)
+            result = query.execute()
+            return [dict_to_model(item, JobListing) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get job listings: {str(e)}")
+            return []
+    
+    def update_job_listing(self, job_id: str, **kwargs) -> bool:
+        """Update job listing"""
+        try:
+            kwargs['updated_at'] = datetime.now().isoformat()
+            result = self.client.table('job_listings').update(kwargs).eq('id', job_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to update job listing: {str(e)}")
+            return False
+    
+    # Application operations
+    def create_application(self, user_id: str, job_listing_id: str, 
+                          resume_template_id: str, **kwargs) -> Application:
+        """Create new application"""
+        try:
+            app_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'job_listing_id': job_listing_id,
+                'resume_template_id': resume_template_id,
+                'status': ApplicationStatus.PENDING.value,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('applications').insert(app_data).execute()
+            return dict_to_model(result.data[0], Application)
+            
+        except Exception as e:
+            logger.error(f"Failed to create application: {str(e)}")
+            raise
+    
+    def get_applications(self, user_id: str, status: ApplicationStatus = None,
+                        limit: int = None) -> List[Application]:
+        """Get applications for user"""
+        try:
+            query = self.client.table('applications').select('*').eq('user_id', user_id)
+            
+            if status:
+                query = query.eq('status', status.value)
+            if limit:
+                query = query.limit(limit)
+                
+            query = query.order('created_at', desc=True)
+            result = query.execute()
+            return [dict_to_model(item, Application) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get applications: {str(e)}")
+            return []
+    
+    def update_application(self, app_id: str, **kwargs) -> bool:
+        """Update application"""
+        try:
+            kwargs['updated_at'] = datetime.now().isoformat()
+            result = self.client.table('applications').update(kwargs).eq('id', app_id).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to update application: {str(e)}")
+            return False
+    
+    # Agent log operations
+    def create_agent_log(self, user_id: str, agent_type: str, action: str, 
+                        status: AgentStatus = AgentStatus.STARTED, **kwargs) -> AgentLog:
+        """Create agent activity log"""
+        try:
+            log_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'agent_type': agent_type,
+                'action': action,
+                'status': status.value,
+                'created_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('agent_logs').insert(log_data).execute()
+            return dict_to_model(result.data[0], AgentLog)
+            
+        except Exception as e:
+            logger.error(f"Failed to create agent log: {str(e)}")
+            raise
+    
+    def get_agent_logs(self, user_id: str = None, agent_type: str = None,
+                      limit: int = 50) -> List[AgentLog]:
+        """Get agent logs"""
+        
+        # Mock agent logs for testing
+        if self.client is None:
+            mock_logs = []
+            for i in range(5):
+                mock_logs.append(AgentLog(
+                    id=str(uuid.uuid4()),
+                    user_id=user_id,
+                    agent_type=f"test_agent_{i % 3}",
+                    action=f"test_action_{i}",
+                    status=AgentStatus.COMPLETED if i % 2 == 0 else AgentStatus.STARTED,
+                    duration_ms=1000 + (i * 200),
+                    created_at=datetime.now() - timedelta(hours=i)
+                ))
+            return mock_logs
+        
+        try:
+            query = self.client.table('agent_logs').select('*')
+            
+            if user_id:
+                query = query.eq('user_id', user_id)
+            if agent_type:
+                query = query.eq('agent_type', agent_type)
+                
+            query = query.order('created_at', desc=True).limit(limit)
+            result = query.execute()
+            return [dict_to_model(item, AgentLog) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get agent logs: {str(e)}")
+            return []
+    
+    # Statistics and analytics
+    def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+        """Get user statistics"""
+        
+        # Mock stats for testing
+        if self.client is None:
+            return {
+                'resumes': 2,
+                'jobs_discovered': 15,
+                'applications_submitted': 8,
+                'applications_successful': 3,
+                'job_sites': 3
+            }
+        
+        try:
+            stats = {
+                'resumes': 0,
+                'jobs_discovered': 0,
+                'applications_submitted': 0,
+                'applications_successful': 0,
+                'job_sites': 0
+            }
+            
+            # Count resumes
+            result = self.client.table('resume_templates').select('id').eq('user_id', user_id).execute()
+            stats['resumes'] = len(result.data)
+            
+            # Count job sites
+            result = self.client.table('job_sites').select('id').eq('user_id', user_id).execute()
+            stats['job_sites'] = len(result.data)
+            
+            # Count applications
+            result = self.client.table('applications').select('id', 'status').eq('user_id', user_id).execute()
+            stats['applications_submitted'] = len(result.data)
+            stats['applications_successful'] = len([app for app in result.data if app['status'] in ['submitted', 'confirmed']])
+            
+            # Count discovered jobs (from user's job sites)
+            user_sites = self.get_job_sites(user_id)
+            site_ids = [site.id for site in user_sites]
+            
+            if site_ids:
+                result = self.client.table('job_listings').select('id').in_('job_site_id', site_ids).execute()
+                stats['jobs_discovered'] = len(result.data)
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get user stats: {str(e)}")
+            return {
+                'resumes': 0,
+                'jobs_discovered': 0,
+                'applications_submitted': 0,
+                'applications_successful': 0,
+                'job_sites': 0
+            }
+
+# Global database operations instance
+_db_ops = None
+
+def get_db_operations() -> DatabaseOperations:
+    """Get database operations instance"""
+    global _db_ops
+    if _db_ops is None:
+        _db_ops = DatabaseOperations()
+    return _db_ops

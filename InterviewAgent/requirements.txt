@@ -1,0 +1,41 @@
+# Core Framework
+streamlit>=1.28.0
+
+# AI and OpenAI
+openai>=1.0.0
+
+# Web Automation
+playwright>=1.30.0
+
+# Database and Storage
+supabase>=2.0.0
+
+# Data Processing
+pandas>=2.0.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+
+# Security and Encryption
+cryptography>=40.0.0
+
+# Job Scheduling
+apscheduler>=3.0.0
+
+# HTTP Requests and Web Scraping
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+
+# Document Generation
+python-docx>=0.8.0
+reportlab>=3.5.0
+
+# Utilities
+pydantic>=1.8.0
+python-multipart>=0.0.5
+
+# Visualization (for Streamlit dashboard)
+plotly>=5.0.0
+
+# Development and Testing
+pytest>=7.0.0
