@@ -2,7 +2,7 @@
 streamlit>=1.28.0
 
 # AI and OpenAI
-openai>=1.0.0
+openai>=1.87.0
 
 # Web Automation
 playwright>=1.30.0

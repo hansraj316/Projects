@@ -14,6 +14,8 @@ try:
 except ImportError:
     OpenAI = None
 
+from ..config import get_config
+
 
 @dataclass
 class AgentTask:
@@ -50,17 +52,27 @@ class BaseAgent(ABC):
         self.description = description
         self.config = config or {}
         self.logger = logging.getLogger(f"agent.{name}")
+        self.app_config = get_config()
         self.openai_client = None
+        self.conversation_state = {}  # For managing conversation state
         
-        # Initialize OpenAI client if API key is available
-        if self.config.get('OPENAI_API_KEY'):
-            if OpenAI:
-                self.openai_client = OpenAI(api_key=self.config['OPENAI_API_KEY'])
-                self.logger.info(f"OpenAI client initialized for agent {name}")
+        # Initialize OpenAI client
+        self._init_openai_client()
+        
+    def _init_openai_client(self):
+        """Initialize OpenAI client with proper error handling"""
+        try:
+            if self.app_config.OPENAI_API_KEY:
+                if OpenAI:
+                    self.openai_client = self.app_config.get_responses_client()
+                    self.logger.info(f"OpenAI Responses API client initialized for agent {self.name}")
+                else:
+                    self.logger.warning("OpenAI package not available")
             else:
-                self.logger.warning("OpenAI package not available")
-        else:
-            self.logger.info(f"Agent {name} running without OpenAI (mock mode)")
+                self.logger.info(f"Agent {self.name} running without OpenAI (mock mode)")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+            self.openai_client = None
     
     @abstractmethod
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
@@ -88,40 +100,134 @@ class BaseAgent(ABC):
         """
         return True
     
-    def get_ai_response(self, prompt: str, system_message: str = None, model: str = "gpt-3.5-turbo") -> str:
+    def get_response(self, input_text: str, tools: List[Dict] = None, model: str = None) -> str:
         """
-        Get response from OpenAI API
+        Get response using OpenAI Responses API
         
         Args:
-            prompt: The user prompt
-            system_message: Optional system message
-            model: OpenAI model to use
+            input_text: The user input text
+            tools: Optional list of tools for the agent to use
+            model: OpenAI model to use (defaults to config model)
             
         Returns:
             AI response text
         """
         if not self.openai_client:
             self.logger.warning("OpenAI client not available, returning mock response")
-            return f"[MOCK AI RESPONSE] Generated content for: {prompt[:50]}..."
+            return f"[MOCK AI RESPONSE] Generated content for: {input_text[:50]}..."
+        
+        # Use configured model if not specified
+        if not model:
+            model = self.app_config.OPENAI_MODEL
         
         try:
-            messages = []
-            if system_message:
-                messages.append({"role": "system", "content": system_message})
-            messages.append({"role": "user", "content": prompt})
+            # Build the request for Responses API
+            request_data = {
+                "model": model,
+                "input": input_text,
+                "instructions": self.description
+            }
             
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=1000
-            )
+            # Add tools if provided
+            if tools:
+                request_data["tools"] = tools
             
-            return response.choices[0].message.content
+            # Make the Responses API call
+            response = self.openai_client.responses.create(**request_data)
+            
+            # Extract the text content from the response
+            if hasattr(response, 'output') and response.output:
+                if isinstance(response.output, list) and len(response.output) > 0:
+                    message = response.output[0]
+                    if hasattr(message, 'content') and message.content:
+                        if isinstance(message.content, list) and len(message.content) > 0:
+                            return message.content[0].text
+                        elif hasattr(message.content, 'text'):
+                            return message.content.text
+                return str(response.output)
+            return "No response generated"
             
         except Exception as e:
-            self.logger.error(f"OpenAI API error: {str(e)}")
-            return f"[ERROR] Failed to generate AI response: {str(e)}"
+            self.logger.error(f"OpenAI Responses API error: {str(e)}")
+            return f"[ERROR] Failed to generate response: {str(e)}"
+    
+    async def get_response_async(self, input_text: str, tools: List[Dict] = None, model: str = None) -> str:
+        """
+        Get response using OpenAI Responses API (async version)
+        
+        Args:
+            input_text: The user input text
+            tools: Optional list of tools for the agent to use
+            model: OpenAI model to use (defaults to config model)
+            
+        Returns:
+            AI response text
+        """
+        if not self.openai_client:
+            self.logger.warning("OpenAI client not available, returning mock response")
+            return f"[MOCK AI RESPONSE] Generated content for: {input_text[:50]}..."
+        
+        # Use configured model if not specified
+        if not model:
+            model = self.app_config.OPENAI_MODEL
+        
+        try:
+            # Build the request for Responses API
+            request_data = {
+                "model": model,
+                "input": input_text,
+                "instructions": self.description
+            }
+            
+            # Add tools if provided
+            if tools:
+                request_data["tools"] = tools
+            
+            # Make the async Responses API call  
+            response = await self.openai_client.responses.create(**request_data)
+            
+            # Extract the text content from the response
+            if hasattr(response, 'output') and response.output:
+                if isinstance(response.output, list) and len(response.output) > 0:
+                    message = response.output[0]
+                    if hasattr(message, 'content') and message.content:
+                        if isinstance(message.content, list) and len(message.content) > 0:
+                            return message.content[0].text
+                        elif hasattr(message.content, 'text'):
+                            return message.content.text
+                return str(response.output)
+            return "No response generated"
+            
+        except Exception as e:
+            self.logger.error(f"OpenAI Responses API error: {str(e)}")
+            return f"[ERROR] Failed to generate response: {str(e)}"
+    
+    def add_web_search_tool(self) -> Dict:
+        """Add web search tool for Responses API"""
+        return {"type": "web_search_preview"}
+    
+    def add_file_search_tool(self) -> Dict:
+        """Add file search tool for Responses API"""
+        return {"type": "file_search"}
+    
+    def create_custom_tool(self, name: str, description: str, parameters: Dict) -> Dict:
+        """
+        Create a custom tool definition for Responses API
+        
+        Args:
+            name: Tool name
+            description: Tool description
+            parameters: Tool parameters schema
+            
+        Returns:
+            Tool definition dictionary
+        """
+        return {
+            "type": "function",
+            "name": name,
+            "description": description,
+            "parameters": parameters
+        }
     
     def log_task_start(self, task: AgentTask, context: AgentContext):
         """Log the start of task execution"""

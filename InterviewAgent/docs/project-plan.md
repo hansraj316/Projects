@@ -21,7 +21,7 @@ An intelligent automation system that helps job candidates apply to multiple pos
 /InterviewAgent
 ├── /docs
 │   ├── project-plan.md (this file)
-│   ├── progress-tracker.md
+│   ├── TASKS.md
 │   └── api-documentation.md
 ├── /src
 │   ├── /agents              # AI agent implementations
@@ -88,7 +88,7 @@ progress_tracking, task_dependencies
 
 **7. Progress Tracking Agent**
 - Monitors all task completion
-- Updates project-plan.md and progress-tracker.md
+- Updates project-plan.md and TASKS.md
 - Generates status reports
 - Tracks development milestones
 

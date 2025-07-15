@@ -88,7 +88,7 @@ flake8 src/
 4. **App Access**: Open http://localhost:8501
 
 ### Progress Tracking
-- All major tasks are tracked in `docs/progress-tracker.md`
+- All major tasks are tracked in `docs/TASKS.md`
 - Project plan is maintained in `docs/project-plan.md`
 - Update progress files when completing milestones
 - **Phase 1 completed** - ready for agent development
@@ -119,6 +119,7 @@ flake8 src/
 - Implement comprehensive error handling
 - Log all agent activities for debugging
 - Use structured data for agent communication
+- **Use the Responses API while creating agents**
 
 ### Security Considerations
 - Encrypt job site credentials before storage
@@ -156,3 +157,5 @@ flake8 src/
 3. **Resume Optimization**: Implement AI-powered resume customization
 4. **Cover Letter Generation**: Build personalized cover letter creation
 5. **Job Discovery**: Add web scraping capabilities with Playwright
+
+```

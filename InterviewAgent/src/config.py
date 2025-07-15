@@ -4,8 +4,9 @@ Configuration management for InterviewAgent
 
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from dotenv import load_dotenv
+import openai
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,9 @@ class Config:
         
         # OpenAI Configuration
         self.OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+        self.OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-4o-mini')
+        self.OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', '0.7'))
+        self.OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', '4000'))
         
         # Gmail Configuration
         self.GMAIL_EMAIL = os.getenv('GMAIL_EMAIL')
@@ -71,6 +75,20 @@ class Config:
             raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
         
         return True
+    
+    def get_openai_client(self) -> openai.OpenAI:
+        """Get configured OpenAI client"""
+        if not self.OPENAI_API_KEY:
+            raise ValueError("OpenAI API key not configured")
+        
+        return openai.OpenAI(api_key=self.OPENAI_API_KEY)
+    
+    def get_responses_client(self) -> openai.OpenAI:
+        """Get configured OpenAI client for Responses API"""
+        if not self.OPENAI_API_KEY:
+            raise ValueError("OpenAI API key not configured")
+        
+        return openai.OpenAI(api_key=self.OPENAI_API_KEY)
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary (excluding sensitive data)"""
