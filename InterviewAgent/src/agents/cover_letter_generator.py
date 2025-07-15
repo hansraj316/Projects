@@ -17,7 +17,7 @@ class CoverLetterAgent(BaseAgent):
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(
             name="cover_letter_generator",
-            description="AI-powered personalized cover letter creation",
+            description="You are an expert career consultant and professional writer specializing in compelling, personalized cover letters. You create letters that address specific job requirements, highlight relevant achievements, show genuine company interest, and demonstrate cultural fit. You can research companies and industry trends to make letters more compelling.",
             config=config
         )
     
@@ -39,6 +39,8 @@ class CoverLetterAgent(BaseAgent):
             
             if task_type == "generate_cover_letter":
                 result = await self._generate_cover_letter(task, context)
+            elif task_type == "generate_with_research":
+                result = await self._generate_with_research(task, context)
             elif task_type == "customize_template":
                 result = await self._customize_template(task, context)
             elif task_type == "generate_variations":
@@ -123,8 +125,8 @@ class CoverLetterAgent(BaseAgent):
         Generate the cover letter in a professional business letter format.
         """
         
-        # Get AI response
-        ai_response = self.get_ai_response(prompt, system_message, model="gpt-3.5-turbo")
+        # Get AI response using Responses API
+        ai_response = self.get_response(prompt)
         
         # Structure the cover letter
         cover_letter_data = self._structure_cover_letter(ai_response, {
@@ -152,6 +154,114 @@ class CoverLetterAgent(BaseAgent):
                 "company_name": company_name,
                 "generation_date": datetime.now().isoformat(),
                 "template_used": "ai_generated"
+            }
+        )
+    
+    async def _generate_with_research(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
+        """
+        Generate cover letter with company research using web search
+        
+        Args:
+            task: The generation task
+            context: Context including job and candidate information
+            
+        Returns:
+            Generated cover letter with company insights
+        """
+        # Extract information from task data
+        job_description = task.input_data.get("job_description", "")
+        company_name = task.input_data.get("company_name", "the company")
+        job_title = task.input_data.get("job_title", "this position")
+        hiring_manager = task.input_data.get("hiring_manager", "Hiring Manager")
+        candidate_info = task.input_data.get("candidate_info", {})
+        resume_summary = task.input_data.get("resume_summary", {})
+        
+        # Research the company using web search
+        research_prompt = f"""
+        Research {company_name} to gather information for a personalized cover letter for a {job_title} position.
+        
+        Focus on:
+        1. Company mission, values, and culture
+        2. Recent news, achievements, or product launches
+        3. Company size, growth, and market position
+        4. Key executives and leadership team
+        5. Company initiatives and social responsibility
+        6. Industry trends affecting the company
+        
+        Provide specific, current information that can be used to demonstrate genuine interest and knowledge about the company.
+        """
+        
+        # Use web search tool for company research
+        tools = [self.add_web_search_tool()]
+        company_research = self.get_response(research_prompt, tools=tools)
+        
+        # Now generate the cover letter with research insights
+        cover_letter_prompt = f"""
+        Create a compelling, personalized cover letter for the {job_title} position at {company_name}.
+        
+        Job Details:
+        - Company: {company_name}
+        - Position: {job_title}
+        - Hiring Manager: {hiring_manager}
+        
+        Job Description:
+        {job_description}
+        
+        Candidate Information:
+        {json.dumps(candidate_info, indent=2)}
+        
+        Resume Summary:
+        {json.dumps(resume_summary, indent=2)}
+        
+        Company Research Insights:
+        {company_research}
+        
+        Requirements:
+        1. Address to {hiring_manager}
+        2. Open with enthusiasm that references specific company information
+        3. Highlight 2-3 achievements that directly match job requirements
+        4. Demonstrate company knowledge using the research insights
+        5. Show cultural fit and alignment with company values
+        6. Include quantifiable results and specific examples
+        7. Close with confidence and clear next steps
+        8. Keep to 3-4 paragraphs, professional business format
+        
+        Use the company research to make this letter genuinely personalized and compelling.
+        """
+        
+        # Get AI response using Responses API
+        ai_response = self.get_response(cover_letter_prompt)
+        
+        # Structure the cover letter
+        cover_letter_data = self._structure_cover_letter(ai_response, {
+            "company_name": company_name,
+            "job_title": job_title,
+            "hiring_manager": hiring_manager,
+            "candidate_name": candidate_info.get("name", "Candidate Name"),
+            "research_enhanced": True
+        })
+        
+        # Calculate quality metrics
+        quality_score = self._calculate_quality_score(ai_response, job_description)
+        
+        return self.create_result(
+            success=True,
+            data={
+                "cover_letter": cover_letter_data,
+                "company_research": company_research,
+                "quality_score": quality_score,
+                "word_count": len(ai_response.split()),
+                "key_points": self._extract_key_points(ai_response),
+                "personalization_elements": self._identify_personalization(ai_response, company_name, job_title),
+                "research_insights": self._extract_research_insights(company_research)
+            },
+            message="Cover letter successfully generated with company research",
+            metadata={
+                "job_title": job_title,
+                "company_name": company_name,
+                "generation_date": datetime.now().isoformat(),
+                "template_used": "ai_generated_with_research",
+                "research_enhanced": True
             }
         )
     
@@ -199,7 +309,7 @@ class CoverLetterAgent(BaseAgent):
         Return the fully customized cover letter.
         """
         
-        ai_response = self.get_ai_response(prompt, system_message)
+        ai_response = self.get_response(prompt)
         
         customized_letter = self._structure_cover_letter(ai_response, {
             "company_name": company_name,
@@ -251,7 +361,7 @@ class CoverLetterAgent(BaseAgent):
             while maintaining professionalism and relevance.
             """
             
-            ai_response = self.get_ai_response(prompt, system_message)
+            ai_response = self.get_response(prompt)
             
             variation = {
                 "tone": tone,
@@ -426,3 +536,18 @@ class CoverLetterAgent(BaseAgent):
                 elements.append(f"Company research: {indicator} mentioned")
         
         return elements
+    
+    def _extract_research_insights(self, research_content: str) -> List[str]:
+        """Extract key insights from company research"""
+        insights = []
+        
+        # Look for key information patterns
+        lines = research_content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line and len(line) > 50:  # Substantial content
+                # Look for insights about company
+                if any(keyword in line.lower() for keyword in ['company', 'mission', 'values', 'culture', 'recent', 'growth', 'founded', 'headquarters']):
+                    insights.append(line)
+        
+        return insights[:5]  # Return top 5 insights

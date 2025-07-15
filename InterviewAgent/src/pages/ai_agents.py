@@ -12,14 +12,32 @@ import os
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from agents import AgentManager, AgentTask, AgentContext
-from config import load_config
+try:
+    from agents import AgentManager, AgentTask, AgentContext
+    agents_available = True
+except ImportError:
+    AgentManager = None
+    AgentTask = None
+    AgentContext = None
+    agents_available = False
+
+try:
+    from config import load_config
+except ImportError:
+    from config import Config
+    def load_config():
+        return Config()
 
 
 def show_ai_agents():
     """Display AI agents demonstration page"""
     st.title("🤖 AI Agents")
     st.markdown("Demonstrate and test the AI-powered agents for job application automation.")
+    
+    if not agents_available or AgentManager is None:
+        st.error("⚠️ AI Agents functionality is not available. AgentManager not found.")
+        st.info("This page demonstrates the AI agent capabilities. The agents are integrated into the Resume Manager, Job Search, and Applications pages.")
+        return
     
     # Initialize agent manager
     if 'agent_manager' not in st.session_state:

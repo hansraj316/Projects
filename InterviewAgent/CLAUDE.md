@@ -158,4 +158,5 @@ flake8 src/
 4. **Cover Letter Generation**: Build personalized cover letter creation
 5. **Job Discovery**: Add web scraping capabilities with Playwright
 
-```
+## Development Memories
+- Make sure every step is updated in the blog-content.md

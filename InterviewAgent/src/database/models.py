@@ -128,6 +128,62 @@ class AgentLog:
     duration_ms: Optional[int] = None
     created_at: Optional[datetime] = None
 
+@dataclass
+class AgentResult:
+    """Agent result model for storing agent outputs"""
+    id: str
+    user_id: str
+    agent_type: str
+    task_type: str
+    input_data: Dict[str, Any]
+    output_data: Dict[str, Any]
+    success: bool
+    error_message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+@dataclass
+class CoverLetter:
+    """Cover letter model for storing generated cover letters"""
+    id: str
+    user_id: str
+    job_title: str
+    company_name: str
+    cover_letter_content: str
+    quality_score: Optional[int] = None
+    generation_type: str = "standard"
+    agent_result_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+@dataclass
+class OptimizedResume:
+    """Optimized resume model for storing resume optimizations"""
+    id: str
+    user_id: str
+    original_resume_id: str
+    job_title: str
+    company_name: str
+    optimized_content: str
+    job_match_score: Optional[int] = None
+    optimization_type: str = "standard"
+    agent_result_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+@dataclass
+class JobSearch:
+    """Job search model for storing job search results"""
+    id: str
+    user_id: str
+    search_query: str
+    search_criteria: Dict[str, Any]
+    jobs_found: int
+    search_results: Dict[str, Any]
+    agent_result_id: Optional[str] = None
+    created_at: Optional[datetime] = None
+
 # Utility functions for model conversion
 def dict_to_model(data: Dict[str, Any], model_class):
     """Convert dictionary to model instance"""

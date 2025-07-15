@@ -17,7 +17,7 @@ class ResumeOptimizerAgent(BaseAgent):
     def __init__(self, config: Dict[str, Any] = None):
         super().__init__(
             name="resume_optimizer",
-            description="AI-powered resume customization for specific job listings",
+            description="You are an expert resume writer and career consultant with deep knowledge of ATS systems, industry trends, and hiring practices. You optimize resumes for specific job listings by analyzing requirements, identifying key skills, and ensuring ATS-friendly formatting. You can search for industry trends and salary data when needed.",
             config=config
         )
     
@@ -39,6 +39,8 @@ class ResumeOptimizerAgent(BaseAgent):
             
             if task_type == "optimize_resume":
                 result = await self._optimize_resume(task, context)
+            elif task_type == "optimize_with_research":
+                result = await self._optimize_with_research(task, context)
             elif task_type == "analyze_keywords":
                 result = await self._analyze_keywords(task, context)
             elif task_type == "generate_variations":
@@ -106,8 +108,8 @@ class ResumeOptimizerAgent(BaseAgent):
         Format the response as JSON with clear sections.
         """
         
-        # Get AI response
-        ai_response = self.get_ai_response(prompt, system_message)
+        # Get AI response using Responses API
+        ai_response = self.get_response(prompt)
         
         # Parse and structure the optimization results
         optimized_content = self._parse_optimization_response(ai_response)
@@ -129,6 +131,101 @@ class ResumeOptimizerAgent(BaseAgent):
                 "job_title": job_title,
                 "company_name": company_name,
                 "optimization_date": datetime.now().isoformat()
+            }
+        )
+    
+    async def _optimize_with_research(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
+        """
+        Enhanced resume optimization with industry research using web search
+        
+        Args:
+            task: The optimization task
+            context: Context including job and resume information
+            
+        Returns:
+            Enhanced optimized resume result with industry insights
+        """
+        # Get job description and current resume from task data
+        job_description = task.input_data.get("job_description", "")
+        current_resume = task.input_data.get("current_resume", {})
+        company_name = task.input_data.get("company_name", "the company")
+        job_title = task.input_data.get("job_title", "this position")
+        industry = task.input_data.get("industry", "")
+        
+        # Research current industry trends and salary information
+        research_prompt = f"""
+        Research current trends, skills, and requirements for {job_title} positions in the {industry} industry at companies like {company_name}. 
+        
+        Focus on:
+        1. Most in-demand skills for this role in 2025
+        2. Industry-specific keywords and terminology
+        3. Typical salary ranges and benefits
+        4. Common qualifications and certifications
+        5. Trending technologies or methodologies
+        
+        Job Description Context:
+        {job_description[:500]}...
+        
+        Provide actionable insights for resume optimization.
+        """
+        
+        # Use web search tool for current industry data
+        tools = [self.add_web_search_tool()]
+        industry_research = self.get_response(research_prompt, tools=tools)
+        
+        # Now optimize the resume with both job description and industry research
+        optimization_prompt = f"""
+        Using the job description and current industry research, optimize this resume for maximum impact.
+        
+        Job Description:
+        {job_description}
+        
+        Industry Research and Trends:
+        {industry_research}
+        
+        Current Resume:
+        {json.dumps(current_resume, indent=2)}
+        
+        Provide a comprehensive optimization with:
+        1. Updated professional summary tailored to current market trends
+        2. Skills section with trending technologies and methodologies
+        3. Achievement bullet points with quantifiable results
+        4. Industry-specific keywords for ATS optimization
+        5. Recommended certifications or skills to highlight
+        6. Salary negotiation talking points based on market research
+        
+        Format as JSON with clear sections: professional_summary, skills, achievements, keywords, recommendations, salary_insights.
+        """
+        
+        ai_response = self.get_response(optimization_prompt)
+        
+        # Parse and structure the enhanced optimization results
+        optimized_content = self._parse_optimization_response(ai_response)
+        
+        # Add industry research insights
+        optimized_content["industry_research"] = industry_research
+        
+        # Generate the optimized resume data
+        optimized_resume = self._apply_optimizations(current_resume, optimized_content)
+        
+        return self.create_result(
+            success=True,
+            data={
+                "optimized_resume": optimized_resume,
+                "optimization_summary": optimized_content,
+                "industry_insights": industry_research,
+                "job_match_score": self._calculate_match_score(job_description, optimized_resume),
+                "keywords_added": optimized_content.get("keywords", []),
+                "changes_made": optimized_content.get("changes", []),
+                "salary_insights": optimized_content.get("salary_insights", "")
+            },
+            message="Resume successfully optimized with industry research",
+            metadata={
+                "job_title": job_title,
+                "company_name": company_name,
+                "industry": industry,
+                "optimization_date": datetime.now().isoformat(),
+                "research_enhanced": True
             }
         )
     
@@ -163,7 +260,7 @@ class ResumeOptimizerAgent(BaseAgent):
         Provide the results in JSON format with categories and importance scores (1-10).
         """
         
-        ai_response = self.get_ai_response(prompt, system_message)
+        ai_response = self.get_response(prompt)
         keywords = self._parse_keyword_response(ai_response)
         
         return self.create_result(
@@ -209,7 +306,7 @@ class ResumeOptimizerAgent(BaseAgent):
             Provide the optimized version in JSON format.
             """
             
-            ai_response = self.get_ai_response(prompt, system_message)
+            ai_response = self.get_response(prompt)
             variation = self._parse_variation_response(ai_response, approach)
             variations.append(variation)
         

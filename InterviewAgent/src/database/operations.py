@@ -6,10 +6,12 @@ from typing import List, Optional, Dict, Any
 import logging
 from datetime import datetime, timedelta
 import uuid
+import json
 
 from .connection import get_supabase_client
 from .models import (
     User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
+    AgentResult, CoverLetter, OptimizedResume, JobSearch,
     dict_to_model, model_to_dict,
     ApplicationStatus, JobStatus, AgentStatus
 )
@@ -399,6 +401,220 @@ class DatabaseOperations:
                 'applications_successful': 0,
                 'job_sites': 0
             }
+    
+    # Agent Result operations
+    def create_agent_result(self, user_id: str, agent_type: str, task_type: str,
+                           input_data: Dict[str, Any], output_data: Dict[str, Any],
+                           success: bool, **kwargs) -> AgentResult:
+        """Create agent result record"""
+        if self.client is None:
+            # Mock result for testing
+            return AgentResult(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                agent_type=agent_type,
+                task_type=task_type,
+                input_data=input_data,
+                output_data=output_data,
+                success=success,
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+        
+        try:
+            result_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'agent_type': agent_type,
+                'task_type': task_type,
+                'input_data': json.dumps(input_data),
+                'output_data': json.dumps(output_data),
+                'success': success,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('agent_results').insert(result_data).execute()
+            return dict_to_model(result.data[0], AgentResult)
+            
+        except Exception as e:
+            logger.error(f"Failed to create agent result: {str(e)}")
+            raise
+    
+    def get_agent_results(self, user_id: str, agent_type: str = None, 
+                         task_type: str = None, limit: int = 50) -> List[AgentResult]:
+        """Get agent results"""
+        if self.client is None:
+            return []
+        
+        try:
+            query = self.client.table('agent_results').select('*').eq('user_id', user_id)
+            
+            if agent_type:
+                query = query.eq('agent_type', agent_type)
+            if task_type:
+                query = query.eq('task_type', task_type)
+            
+            query = query.order('created_at', desc=True).limit(limit)
+            result = query.execute()
+            return [dict_to_model(item, AgentResult) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get agent results: {str(e)}")
+            return []
+    
+    # Cover Letter operations
+    def create_cover_letter(self, user_id: str, job_title: str, company_name: str,
+                           cover_letter_content: str, **kwargs) -> CoverLetter:
+        """Create cover letter record"""
+        if self.client is None:
+            # Mock cover letter for testing
+            return CoverLetter(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                job_title=job_title,
+                company_name=company_name,
+                cover_letter_content=cover_letter_content,
+                quality_score=kwargs.get('quality_score', 85),
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+        
+        try:
+            letter_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'job_title': job_title,
+                'company_name': company_name,
+                'cover_letter_content': cover_letter_content,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('cover_letters').insert(letter_data).execute()
+            return dict_to_model(result.data[0], CoverLetter)
+            
+        except Exception as e:
+            logger.error(f"Failed to create cover letter: {str(e)}")
+            raise
+    
+    def get_cover_letters(self, user_id: str, limit: int = 50) -> List[CoverLetter]:
+        """Get cover letters for user"""
+        if self.client is None:
+            return []
+        
+        try:
+            query = self.client.table('cover_letters').select('*').eq('user_id', user_id)
+            query = query.order('created_at', desc=True).limit(limit)
+            result = query.execute()
+            return [dict_to_model(item, CoverLetter) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get cover letters: {str(e)}")
+            return []
+    
+    # Optimized Resume operations
+    def create_optimized_resume(self, user_id: str, original_resume_id: str,
+                               job_title: str, company_name: str,
+                               optimized_content: str, **kwargs) -> OptimizedResume:
+        """Create optimized resume record"""
+        if self.client is None:
+            # Mock optimized resume for testing
+            return OptimizedResume(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                original_resume_id=original_resume_id,
+                job_title=job_title,
+                company_name=company_name,
+                optimized_content=optimized_content,
+                job_match_score=kwargs.get('job_match_score', 87),
+                created_at=datetime.now(),
+                updated_at=datetime.now()
+            )
+        
+        try:
+            resume_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'original_resume_id': original_resume_id,
+                'job_title': job_title,
+                'company_name': company_name,
+                'optimized_content': optimized_content,
+                'created_at': datetime.now().isoformat(),
+                'updated_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('optimized_resumes').insert(resume_data).execute()
+            return dict_to_model(result.data[0], OptimizedResume)
+            
+        except Exception as e:
+            logger.error(f"Failed to create optimized resume: {str(e)}")
+            raise
+    
+    def get_optimized_resumes(self, user_id: str, limit: int = 50) -> List[OptimizedResume]:
+        """Get optimized resumes for user"""
+        if self.client is None:
+            return []
+        
+        try:
+            query = self.client.table('optimized_resumes').select('*').eq('user_id', user_id)
+            query = query.order('created_at', desc=True).limit(limit)
+            result = query.execute()
+            return [dict_to_model(item, OptimizedResume) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get optimized resumes: {str(e)}")
+            return []
+    
+    # Job Search operations
+    def create_job_search(self, user_id: str, search_query: str,
+                         search_criteria: Dict[str, Any], jobs_found: int,
+                         search_results: Dict[str, Any], **kwargs) -> JobSearch:
+        """Create job search record"""
+        if self.client is None:
+            # Mock job search for testing
+            return JobSearch(
+                id=str(uuid.uuid4()),
+                user_id=user_id,
+                search_query=search_query,
+                search_criteria=search_criteria,
+                jobs_found=jobs_found,
+                search_results=search_results,
+                created_at=datetime.now()
+            )
+        
+        try:
+            search_data = {
+                'id': str(uuid.uuid4()),
+                'user_id': user_id,
+                'search_query': search_query,
+                'search_criteria': json.dumps(search_criteria),
+                'jobs_found': jobs_found,
+                'search_results': json.dumps(search_results),
+                'created_at': datetime.now().isoformat(),
+                **kwargs
+            }
+            
+            result = self.client.table('job_searches').insert(search_data).execute()
+            return dict_to_model(result.data[0], JobSearch)
+            
+        except Exception as e:
+            logger.error(f"Failed to create job search: {str(e)}")
+            raise
+    
+    def get_job_searches(self, user_id: str, limit: int = 50) -> List[JobSearch]:
+        """Get job searches for user"""
+        if self.client is None:
+            return []
+        
+        try:
+            query = self.client.table('job_searches').select('*').eq('user_id', user_id)
+            query = query.order('created_at', desc=True).limit(limit)
+            result = query.execute()
+            return [dict_to_model(item, JobSearch) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get job searches: {str(e)}")
+            return []
 
 # Global database operations instance
 _db_ops = None
