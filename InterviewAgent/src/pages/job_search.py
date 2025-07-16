@@ -15,24 +15,29 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.job_discovery import JobDiscoveryAgent
 from agents.base_agent import AgentTask, AgentContext
 from config import Config
+from database.operations import get_db_operations
 
 def show_job_search():
     """Display the job search page with AI-powered job discovery"""
     
     st.header("🔍 AI-Powered Job Discovery")
     
-    # Initialize session state
+    # Initialize session state and load previous searches
     if 'discovered_jobs' not in st.session_state:
         st.session_state.discovered_jobs = []
+        # Load previous job searches from database
+        _load_previous_job_searches()
     if 'search_results' not in st.session_state:
         st.session_state.search_results = None
     if 'market_analysis' not in st.session_state:
         st.session_state.market_analysis = None
     if 'company_research' not in st.session_state:
         st.session_state.company_research = {}
+    if 'job_search_history' not in st.session_state:
+        st.session_state.job_search_history = []
     
     # Create tabs for different functions
-    tab1, tab2, tab3, tab4 = st.tabs(["🎯 Job Search", "📈 Market Analysis", "🏢 Company Research", "📋 Saved Jobs"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🎯 Job Search", "📈 Market Analysis", "🏢 Company Research", "📋 Saved Jobs", "📚 Search History"])
     
     with tab1:
         _show_job_search_section()
@@ -45,6 +50,9 @@ def show_job_search():
     
     with tab4:
         _show_saved_jobs_section()
+    
+    with tab5:
+        _show_search_history_section()
 
 
 def _show_job_search_section():
@@ -130,7 +138,45 @@ def _show_job_search_section():
                     
                     st.session_state.discovered_jobs.extend(jobs)
                     
-                    st.success(f"Found {len(jobs)} job opportunities!")
+                    # Save to database
+                    try:
+                        db_ops = get_db_operations()
+                        
+                        # Get or create user for single-user MVP
+                        user = db_ops.get_or_create_user(
+                            email="user@interviewagent.local",
+                            full_name="InterviewAgent User"
+                        )
+                        
+                        search_criteria = {
+                            "job_title": job_title,
+                            "location": location,
+                            "experience_level": experience_level,
+                            "company_size": company_size,
+                            "remote_preference": remote_preference,
+                            "salary_range": salary_range,
+                            "required_skills": required_skills,
+                            "industry": industry
+                        }
+                        
+                        # Save job search to database
+                        job_search = db_ops.create_job_search(
+                            user_id=user.id,  # Use proper UUID from user
+                            search_query=f"{job_title} in {location or 'any location'}",
+                            search_criteria=search_criteria,
+                            jobs_found=len(jobs),
+                            search_results=result["data"]
+                        )
+                        
+                        st.success(f"Found {len(jobs)} job opportunities! Search saved to database.")
+                        
+                        # Refresh search history
+                        _refresh_search_history()
+                        
+                    except Exception as db_error:
+                        st.warning(f"Jobs found but database save failed: {str(db_error)}")
+                        st.success(f"Found {len(jobs)} job opportunities!")
+                    
                     st.balloons()
                 else:
                     st.error(f"Search failed: {result.get('message', 'Unknown error')}")
@@ -194,37 +240,67 @@ def _show_search_results():
     elif sort_by == "Job Title":
         filtered_jobs.sort(key=lambda x: x.get("title", ""))
     
-    # Display jobs
+    # Display jobs with search context
     for i, job in enumerate(filtered_jobs):
-        with st.expander(f"📄 {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}"):
-            col1, col2, col3 = st.columns(3)
+        # Enhanced job card display with search metadata
+        search_info = ""
+        if job.get('search_query'):
+            search_info = f" (from: {job.get('search_query')})"
+        
+        with st.expander(f"📄 {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}{search_info}"):
+            # Job header with key info
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 st.write(f"**Location:** {job.get('location', 'Not specified')}")
                 st.write(f"**Experience:** {job.get('experience_level', 'Not specified')}")
             
             with col2:
-                st.write(f"**Skills:** {', '.join(job.get('skills', []))}")
+                st.write(f"**Salary:** {job.get('salary_range', 'Not specified')}")
                 st.write(f"**Source:** {job.get('source', 'Web search')}")
             
             with col3:
-                if st.button("💾 Save Job", key=f"save_{i}"):
+                st.write(f"**Posted:** {job.get('posted_date', 'Unknown')}")
+                if job.get('skills'):
+                    skills_count = len(job['skills'])
+                    st.write(f"**Skills Required:** {skills_count}")
+            
+            with col4:
+                if st.button("💾 Save Job", key=f"search_save_{i}"):
                     job["saved"] = True
                     st.success("Job saved!")
+                    st.rerun()
                 
-                if st.button("🏢 Research Company", key=f"research_{i}"):
+                if st.button("🏢 Research Company", key=f"search_research_{i}"):
                     company_name = job.get("company", "")
                     if company_name:
                         _research_company_async(company_name)
             
             # Job description/summary
             if job.get("summary"):
-                st.write("**Summary:**")
+                st.write("**Job Summary:**")
                 st.write(job["summary"])
             
-            # Job analysis button
-            if st.button("🔍 Analyze Job", key=f"analyze_{i}"):
-                st.info("Job analysis feature will be implemented")
+            # Skills section
+            if job.get("skills"):
+                st.write("**Required Skills:**")
+                # Display skills as tags
+                skills_text = " • ".join(job["skills"])
+                st.markdown(f"🏷️ {skills_text}")
+            
+            # Action buttons
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("🔍 Analyze Job", key=f"search_analyze_{i}"):
+                    st.info("Job analysis feature will be implemented")
+            
+            with col2:
+                if st.button("📝 Generate Cover Letter", key=f"search_cover_letter_{i}"):
+                    st.info("Cover letter generation will be implemented")
+            
+            with col3:
+                if st.button("🚀 Quick Apply", key=f"search_apply_{i}"):
+                    st.info("Application feature will be implemented")
 
 
 def _show_market_analysis_section():
@@ -397,14 +473,19 @@ def _show_saved_jobs_section():
     
     # Display saved jobs
     for i, job in enumerate(saved_jobs):
-        with st.expander(f"📄 {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}"):
-            col1, col2, col3 = st.columns(3)
+        with st.expander(f"⭐ {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}"):
+            # Enhanced layout matching search results
+            col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 st.write(f"**Location:** {job.get('location', 'Not specified')}")
-                st.write(f"**Skills:** {', '.join(job.get('skills', []))}")
+                st.write(f"**Experience:** {job.get('experience_level', 'Not specified')}")
             
             with col2:
+                st.write(f"**Salary:** {job.get('salary_range', 'Not specified')}")
+                st.write(f"**Source:** {job.get('source', 'Web search')}")
+            
+            with col3:
                 saved_date = job.get("discovered_at", "")
                 if saved_date:
                     try:
@@ -412,14 +493,42 @@ def _show_saved_jobs_section():
                         st.write(f"**Saved:** {date_obj.strftime('%Y-%m-%d %H:%M')}")
                     except:
                         st.write(f"**Saved:** {saved_date}")
+                else:
+                    st.write("**Saved:** Recently")
+                
+                if job.get('skills'):
+                    skills_count = len(job['skills'])
+                    st.write(f"**Skills Required:** {skills_count}")
             
-            with col3:
-                if st.button("🗑️ Remove", key=f"remove_{i}"):
+            with col4:
+                if st.button("🗑️ Remove", key=f"saved_remove_{i}"):
                     job["saved"] = False
                     st.success("Job removed from saved list!")
                     st.rerun()
-                
-                if st.button("📝 Apply", key=f"apply_{i}"):
+            
+            # Job description/summary
+            if job.get("summary"):
+                st.write("**Job Summary:**")
+                st.write(job["summary"])
+            
+            # Skills section
+            if job.get("skills"):
+                st.write("**Required Skills:**")
+                skills_text = " • ".join(job["skills"])
+                st.markdown(f"🏷️ {skills_text}")
+            
+            # Action buttons
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                if st.button("🔍 Analyze Job", key=f"saved_analyze_{i}"):
+                    st.info("Job analysis feature will be implemented")
+            
+            with col2:
+                if st.button("📝 Generate Cover Letter", key=f"saved_cover_letter_{i}"):
+                    st.info("Cover letter generation will be implemented")
+            
+            with col3:
+                if st.button("🚀 Apply Now", key=f"saved_apply_{i}"):
                     st.info("Application feature will be implemented")
 
 
@@ -454,7 +563,9 @@ async def _search_jobs(
         
         # Create task
         task = AgentTask(
+            task_id=f"search_jobs_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             task_type="search_jobs",
+            description=f"Search for {job_title} jobs in {location or 'any location'}",
             input_data={
                 "job_title": job_title,
                 "location": location,
@@ -467,11 +578,19 @@ async def _search_jobs(
             }
         )
         
+        # Get or create user for context
+        config = Config()
+        from database.operations import get_db_operations
+        db_ops = get_db_operations()
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
         # Create context
         context = AgentContext(
-            session_id=f"job_search_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            user_id="streamlit_user",
-            shared_data={"search_type": "job_discovery"}
+            user_id=user.id,
+            metadata={"search_type": "job_discovery", "session_id": f"job_search_{datetime.now().strftime('%Y%m%d_%H%M%S')}"}
         )
         
         # Execute the task
@@ -498,7 +617,9 @@ async def _analyze_market_trends(
         
         # Create task
         task = AgentTask(
+            task_id=f"market_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             task_type="analyze_market_trends",
+            description=f"Analyze market trends for {job_title} in {industry or 'any industry'}",
             input_data={
                 "job_title": job_title,
                 "industry": industry,
@@ -506,11 +627,18 @@ async def _analyze_market_trends(
             }
         )
         
+        # Get or create user for context
+        from database.operations import get_db_operations
+        db_ops = get_db_operations()
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
         # Create context
         context = AgentContext(
-            session_id=f"market_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            user_id="streamlit_user",
-            shared_data={"analysis_type": "market_trends"}
+            user_id=user.id,
+            metadata={"analysis_type": "market_trends", "session_id": f"market_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}"}
         )
         
         # Execute the task
@@ -533,17 +661,26 @@ async def _research_company(company_name: str) -> Dict[str, Any]:
         
         # Create task
         task = AgentTask(
+            task_id=f"company_research_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             task_type="research_company",
+            description=f"Research company information for {company_name}",
             input_data={
                 "company_name": company_name
             }
         )
         
+        # Get or create user for context
+        from database.operations import get_db_operations
+        db_ops = get_db_operations()
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
         # Create context
         context = AgentContext(
-            session_id=f"company_research_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            user_id="streamlit_user",
-            shared_data={"research_type": "company_info"}
+            user_id=user.id,
+            metadata={"research_type": "company_info", "session_id": f"company_research_{datetime.now().strftime('%Y%m%d_%H%M%S')}"}
         )
         
         # Execute the task
@@ -555,6 +692,209 @@ async def _research_company(company_name: str) -> Dict[str, Any]:
             "success": False,
             "message": f"Company research failed: {str(e)}"
         }
+
+
+def _load_previous_job_searches():
+    """Load previous job searches from database into session state"""
+    try:
+        db_ops = get_db_operations()
+        
+        # Get or create user
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
+        # Get ALL job searches (no limit for history)
+        job_searches = db_ops.get_job_searches(user.id, limit=100)  # Increased limit
+        st.session_state.job_search_history = job_searches
+        
+        # Load jobs from recent searches into discovered_jobs
+        for search in job_searches:
+            if search.search_results:
+                try:
+                    # Handle both dict and JSON string formats
+                    if isinstance(search.search_results, str):
+                        search_data = json.loads(search.search_results)
+                    else:
+                        search_data = search.search_results
+                    
+                    if 'jobs' in search_data:
+                        jobs = search_data['jobs']
+                    else:
+                        continue
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                for job in jobs:
+                    # Add metadata about which search this came from
+                    try:
+                        if search.created_at:
+                            # Handle timezone-aware datetime
+                            if search.created_at.tzinfo is not None:
+                                discovered_time = search.created_at.replace(tzinfo=None)
+                            else:
+                                discovered_time = search.created_at
+                            job["discovered_at"] = discovered_time.isoformat()
+                        else:
+                            job["discovered_at"] = datetime.now().isoformat()
+                    except Exception:
+                        job["discovered_at"] = datetime.now().isoformat()
+                    
+                    job["saved"] = False
+                    job["search_id"] = search.id
+                    job["search_query"] = search.search_query
+                
+                # Add jobs to discovered_jobs with better deduplication
+                existing_jobs = {
+                    f"{job.get('title', '')}_{job.get('company', '')}_{job.get('job_id', '')}" 
+                    for job in st.session_state.discovered_jobs
+                }
+                
+                for job in jobs:
+                    # Create unique key using job_id if available, otherwise fallback to title+company
+                    job_key = f"{job.get('title', '')}_{job.get('company', '')}_{job.get('job_id', '')}"
+                    if job_key not in existing_jobs:
+                        st.session_state.discovered_jobs.append(job)
+                        existing_jobs.add(job_key)
+        
+    except Exception as e:
+        st.error(f"Failed to load previous job searches: {str(e)}")
+
+
+def _refresh_search_history():
+    """Refresh search history after new search"""
+    try:
+        db_ops = get_db_operations()
+        
+        # Get or create user
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
+        # Refresh job search history
+        job_searches = db_ops.get_job_searches(user.id, limit=100)  # Increased limit
+        st.session_state.job_search_history = job_searches
+        
+    except Exception as e:
+        st.error(f"Failed to refresh search history: {str(e)}")
+
+
+def _show_search_history_section():
+    """Show previous job search history"""
+    st.subheader("📚 Job Search History")
+    
+    if not st.session_state.job_search_history:
+        st.info("No previous job searches found. Start a new search to build your history!")
+        return
+    
+    # Search history metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    total_searches = len(st.session_state.job_search_history)
+    total_jobs = sum(search.jobs_found for search in st.session_state.job_search_history)
+    
+    with col1:
+        st.metric("Total Searches", total_searches)
+    
+    with col2:
+        st.metric("Total Jobs Found", total_jobs)
+    
+    with col3:
+        avg_jobs = total_jobs / total_searches if total_searches > 0 else 0
+        st.metric("Avg Jobs/Search", f"{avg_jobs:.1f}")
+    
+    with col4:
+        recent_search = st.session_state.job_search_history[0] if st.session_state.job_search_history else None
+        if recent_search and recent_search.created_at:
+            # Handle timezone-aware datetime comparison
+            try:
+                # Make both datetimes timezone-naive for comparison
+                if recent_search.created_at.tzinfo is not None:
+                    # If created_at is timezone-aware, convert to naive UTC
+                    search_time = recent_search.created_at.replace(tzinfo=None)
+                else:
+                    # If already naive, use as-is
+                    search_time = recent_search.created_at
+                
+                current_time = datetime.now()
+                days_ago = (current_time - search_time).days
+                st.metric("Last Search", f"{days_ago} days ago")
+            except Exception:
+                st.metric("Last Search", "Recently")
+    
+    # Search history list
+    st.write("### Recent Searches")
+    
+    for i, search in enumerate(st.session_state.job_search_history):
+        with st.expander(f"🔍 {search.search_query} ({search.jobs_found} jobs found)"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Handle timezone-aware datetime display
+                try:
+                    if search.created_at:
+                        # Format datetime, handling timezone-aware dates
+                        if search.created_at.tzinfo is not None:
+                            # Convert to local time for display
+                            display_time = search.created_at.replace(tzinfo=None)
+                        else:
+                            display_time = search.created_at
+                        st.write(f"**Search Date:** {display_time.strftime('%Y-%m-%d %H:%M')}")
+                    else:
+                        st.write("**Search Date:** Unknown")
+                except Exception:
+                    st.write("**Search Date:** Recently")
+                
+                st.write(f"**Jobs Found:** {search.jobs_found}")
+                
+                # Show search criteria
+                if search.search_criteria:
+                    st.write("**Search Criteria:**")
+                    try:
+                        # Handle both dict and JSON string formats
+                        if isinstance(search.search_criteria, str):
+                            criteria = json.loads(search.search_criteria)
+                        else:
+                            criteria = search.search_criteria
+                        
+                        if criteria.get('job_title'):
+                            st.write(f"• Job Title: {criteria['job_title']}")
+                        if criteria.get('location'):
+                            st.write(f"• Location: {criteria['location']}")
+                        if criteria.get('experience_level'):
+                            st.write(f"• Experience: {criteria['experience_level']}")
+                        if criteria.get('remote_preference'):
+                            st.write(f"• Remote: {criteria['remote_preference']}")
+                    except (json.JSONDecodeError, TypeError) as e:
+                        st.write("• Search criteria format error")
+            
+            with col2:
+                # Action buttons
+                if st.button("🔄 Repeat Search", key=f"repeat_search_{i}"):
+                    st.info("Repeat search functionality will be implemented")
+                
+                if st.button("📊 View Results", key=f"view_results_{i}"):
+                    # Load this search results into current view
+                    if search.search_results:
+                        try:
+                            # Handle both dict and JSON string formats
+                            if isinstance(search.search_results, str):
+                                search_data = json.loads(search.search_results)
+                            else:
+                                search_data = search.search_results
+                            
+                            st.session_state.search_results = {
+                                "success": True,
+                                "data": search_data
+                            }
+                            st.success("Search results loaded! Check the Job Search tab.")
+                            st.rerun()
+                        except (json.JSONDecodeError, TypeError) as e:
+                            st.error(f"Failed to load search results: {str(e)}")
+                
+                if st.button("🗑️ Delete Search", key=f"delete_search_{i}"):
+                    st.warning("Delete search functionality will be implemented")
 
 
 if __name__ == "__main__":

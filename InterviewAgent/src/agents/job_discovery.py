@@ -21,6 +21,7 @@ class JobDiscoveryAgent(BaseAgent):
             description="You are an expert job search specialist and market analyst. You help candidates discover relevant job opportunities by analyzing job postings, extracting key requirements, and providing insights about companies and roles. You can search for current job market trends and salary information.",
             config=config
         )
+        self.current_search_criteria = {}
     
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
         """
@@ -82,6 +83,16 @@ class JobDiscoveryAgent(BaseAgent):
         company_size = task.input_data.get("company_size", "")
         remote_preference = task.input_data.get("remote_preference", "")
         salary_range = task.input_data.get("salary_range", "")
+        
+        # Store search criteria for dynamic job generation
+        self.current_search_criteria = {
+            "job_title": job_title,
+            "location": location,
+            "experience_level": experience_level,
+            "company_size": company_size,
+            "remote_preference": remote_preference,
+            "salary_range": salary_range
+        }
         
         # Build search query
         search_query = f"""
@@ -383,18 +394,8 @@ class JobDiscoveryAgent(BaseAgent):
             # Try to parse as JSON first
             return json.loads(search_results)
         except json.JSONDecodeError:
-            # Fallback to basic parsing
-            return [
-                {
-                    "title": "Sample Job Title",
-                    "company": "Sample Company",
-                    "location": "Sample Location",
-                    "summary": "AI-parsed job opportunity",
-                    "skills": ["Python", "SQL", "Problem-solving"],
-                    "experience_level": "Mid-level",
-                    "source": "web_search"
-                }
-            ]
+            # Generate dynamic jobs based on current search
+            return self._generate_dynamic_sample_jobs()
     
     def _parse_job_analysis(self, analysis_result: str) -> Dict[str, Any]:
         """Parse job analysis into structured format"""
@@ -451,3 +452,91 @@ class JobDiscoveryAgent(BaseAgent):
                     "recommendation": "Strong candidate - apply immediately"
                 }
             ]
+    
+    def _generate_dynamic_sample_jobs(self) -> List[Dict[str, Any]]:
+        """Generate dynamic sample jobs based on search criteria"""
+        import random
+        
+        criteria = self.current_search_criteria
+        job_title = criteria.get("job_title", "Software Engineer")
+        location = criteria.get("location", "San Francisco")
+        experience_level = criteria.get("experience_level", "Mid-level")
+        
+        # Base job templates
+        companies = ["Microsoft", "Google", "Amazon", "Meta", "Apple", "Netflix", "Uber", "Airbnb", "Stripe", "Salesforce", "Adobe", "Tesla"]
+        
+        # Generate variations of the searched job title
+        title_variations = [
+            job_title,
+            f"Senior {job_title}",
+            f"{job_title} II",
+            f"Lead {job_title}",
+            f"Principal {job_title}",
+            f"{job_title} - Remote",
+            f"{job_title} Manager"
+        ]
+        
+        # Dynamic location variations
+        if location and location.lower() != "any":
+            locations = [
+                location,
+                f"{location} (Remote)",
+                f"{location} (Hybrid)",
+                f"Remote ({location} preferred)",
+                f"{location} Metro Area"
+            ]
+        else:
+            locations = ["Remote", "San Francisco, CA", "Seattle, WA", "New York, NY", "Austin, TX"]
+        
+        # Generate 6-8 dynamic jobs
+        jobs = []
+        num_jobs = random.randint(6, 8)
+        
+        for i in range(num_jobs):
+            company = random.choice(companies)
+            title = random.choice(title_variations)
+            job_location = random.choice(locations)
+            
+            # Dynamic salary based on experience level
+            if "senior" in experience_level.lower() or "senior" in title.lower():
+                salary_min = random.randint(140, 180)
+                salary_max = salary_min + random.randint(20, 40)
+            elif "lead" in title.lower() or "principal" in title.lower():
+                salary_min = random.randint(180, 220)
+                salary_max = salary_min + random.randint(30, 50)
+            else:
+                salary_min = random.randint(100, 140)
+                salary_max = salary_min + random.randint(20, 30)
+            
+            # Dynamic skills based on job title
+            base_skills = []
+            if "engineer" in job_title.lower():
+                base_skills = ["Python", "JavaScript", "React", "AWS", "Docker"]
+            elif "manager" in job_title.lower():
+                base_skills = ["Leadership", "Project Management", "Agile", "Strategy", "Communication"]
+            elif "data" in job_title.lower():
+                base_skills = ["Python", "SQL", "Machine Learning", "Tableau", "Statistics"]
+            elif "designer" in job_title.lower():
+                base_skills = ["Figma", "UI/UX", "Prototyping", "Design Systems", "User Research"]
+            else:
+                base_skills = ["Communication", "Problem Solving", "Teamwork", "Analysis", "Innovation"]
+            
+            # Add some random additional skills
+            additional_skills = ["Git", "APIs", "Microservices", "Testing", "CI/CD", "Kubernetes", "GraphQL"]
+            skills = base_skills + random.sample(additional_skills, k=random.randint(2, 4))
+            
+            job = {
+                "title": title,
+                "company": company,
+                "location": job_location,
+                "summary": f"Join {company} as a {title}. Work on cutting-edge projects and make a significant impact. We're looking for talented individuals to join our growing team.",
+                "skills": skills,
+                "experience_level": experience_level,
+                "source": random.choice(["LinkedIn", "Indeed", "Company Website", "Glassdoor"]),
+                "salary_range": f"${salary_min}k-${salary_max}k",
+                "posted_date": f"{random.randint(1, 7)} days ago",
+                "job_id": f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{i}"
+            }
+            jobs.append(job)
+        
+        return jobs

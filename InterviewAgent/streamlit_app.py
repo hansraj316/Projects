@@ -69,6 +69,23 @@ def main():
             ]
         )
         
+        # Quick Actions
+        st.markdown("---")
+        st.subheader("🎯 Quick Actions")
+        
+        # Action buttons
+        if st.button("📄 Upload Resume", use_container_width=True, key="sidebar_upload"):
+            st.switch_page("pages/resume_manager.py") if hasattr(st, 'switch_page') else st.info("Navigate to Resume Manager from the dropdown above")
+        
+        if st.button("🔍 Search Jobs", use_container_width=True, key="sidebar_search"):
+            st.switch_page("pages/job_search.py") if hasattr(st, 'switch_page') else st.info("Navigate to Job Search from the dropdown above")
+        
+        if st.button("⚙️ Configure Sites", use_container_width=True, key="sidebar_configure"):
+            st.switch_page("pages/settings.py") if hasattr(st, 'switch_page') else st.info("Navigate to Settings from the dropdown above")
+        
+        if st.button("🤖 Run Automation", use_container_width=True, key="sidebar_automation"):
+            st.info("🚀 Automation workflow will be implemented")
+        
         # Quick stats
         st.markdown("---")
         st.subheader("Quick Stats")
