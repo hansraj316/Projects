@@ -572,10 +572,7 @@ struct DashboardPlanCard: View {
 
 // Old EmptyStateView removed - using LiquidGlassEmptyStateView instead
 
-struct AlertItem: Identifiable {
-    var id = UUID()
-    var message: String
-}
+
 
 // MARK: - Dashboard Plan Detail Sheet
 struct DashboardPlanDetailSheet: View {
@@ -789,12 +786,4 @@ struct DashboardResourceRow: View {
     }
 }
 
-extension DateFormatter {
-    static let relativeDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.doesRelativeDateFormatting = true
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        return formatter
-    }()
-} 
+ 

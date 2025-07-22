@@ -567,14 +567,7 @@ struct LoadingView: View {
     }
 }
 
-extension DateFormatter {
-    static let shortDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-}
+
 
 // Network monitoring wrapper class
 class NetworkMonitorWrapper {
@@ -744,10 +737,7 @@ struct PlanDetailSheetContent: View {
     }
 }
 
-struct AlertItem: Identifiable {
-    var id = UUID()
-    var message: String
-}
+
 
 // MARK: - Liquid Glass Step Indicator
 struct LiquidGlassStepIndicator: View {

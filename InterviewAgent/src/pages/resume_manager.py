@@ -5,8 +5,10 @@ Resume Manager page for InterviewAgent Streamlit app
 import streamlit as st
 import asyncio
 import json
+import tempfile
 from typing import Dict, Any
 from datetime import datetime
+from pathlib import Path
 
 import sys
 import os
@@ -15,6 +17,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from agents.resume_optimizer import ResumeOptimizerAgent
 from agents.base_agent import AgentTask, AgentContext
 from config import Config
+from utils.file_handler import FileHandler, extract_text_from_file
+from services.resume_parser import parse_resume_from_text
 
 def show_resume_manager():
     """Display the resume manager page with AI optimization"""
@@ -55,50 +59,93 @@ def _show_upload_section():
     if uploaded_file:
         st.success(f"Resume uploaded: {uploaded_file.name}")
         
-        # Process the uploaded file
-        file_content = uploaded_file.read()
+        # Initialize file handler
+        file_handler = FileHandler()
         
-        # For now, create a sample resume structure
-        # In production, this would parse the actual file
-        st.session_state.resume_data = {
-            "name": "John Doe",
-            "email": "john.doe@email.com",
-            "phone": "+1 (555) 123-4567",
-            "professional_summary": "Experienced software engineer with expertise in Python, JavaScript, and cloud technologies.",
-            "skills": ["Python", "JavaScript", "React", "Node.js", "AWS", "Docker", "SQL"],
-            "experience": [
-                {
-                    "company": "Tech Corp",
-                    "position": "Senior Software Engineer",
-                    "duration": "2020-Present",
-                    "achievements": [
-                        "Developed scalable web applications serving 100K+ users",
-                        "Improved system performance by 40% through optimization",
-                        "Led a team of 5 developers on critical projects"
-                    ]
-                },
-                {
-                    "company": "StartupXYZ",
-                    "position": "Full Stack Developer",
-                    "duration": "2018-2020",
-                    "achievements": [
-                        "Built responsive web applications using React and Node.js",
-                        "Implemented CI/CD pipelines reducing deployment time by 60%",
-                        "Collaborated with cross-functional teams to deliver features"
-                    ]
-                }
-            ],
-            "education": [
-                {
-                    "degree": "Bachelor of Science in Computer Science",
-                    "school": "University of Technology",
-                    "year": "2018"
-                }
-            ],
-            "uploaded_file": uploaded_file.name,
-            "upload_date": datetime.now().isoformat()
-        }
+        # Validate the uploaded file
+        validation = file_handler.validate_file(uploaded_file, uploaded_file.name)
         
+        if not validation.get("valid", False):
+            st.error(f"File validation failed: {validation.get('error', 'Unknown error')}")
+            return
+        
+        # Display file info
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("File Size", f"{validation['file_size'] / (1024*1024):.2f} MB")
+        with col2:
+            st.metric("File Type", validation['file_extension'].upper())
+        with col3:
+            st.metric("Status", "✅ Valid")
+        
+        # Process the uploaded file with progress
+        with st.spinner("Processing resume..."):
+            try:
+                # Save file temporarily
+                save_result = file_handler.save_file(uploaded_file, uploaded_file.name, "streamlit_user")
+                
+                if not save_result.get("success", False):
+                    st.error(f"Failed to save file: {save_result.get('error', 'Unknown error')}")
+                    return
+                
+                file_path = save_result["file_path"]
+                
+                # Extract text from file
+                st.info("Extracting text from resume...")
+                text_result = extract_text_from_file(file_path)
+                
+                if not text_result.get("success", False):
+                    st.error(f"Failed to extract text: {text_result.get('error', 'Unknown error')}")
+                    return
+                
+                extracted_text = text_result["text"]
+                
+                # Display extraction info
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Words Extracted", text_result.get("word_count", 0))
+                with col2:
+                    st.metric("Characters", text_result.get("char_count", 0))
+                with col3:
+                    if "page_count" in text_result:
+                        st.metric("Pages", text_result["page_count"])
+                    else:
+                        st.metric("Type", text_result.get("file_type", "").upper())
+                
+                # Show extracted text preview
+                with st.expander("📄 Preview Extracted Text"):
+                    st.text_area(
+                        "Extracted Text (first 2000 characters)", 
+                        extracted_text[:2000] + ("..." if len(extracted_text) > 2000 else ""),
+                        height=300,
+                        disabled=True
+                    )
+                
+                # Parse resume with AI
+                st.info("Parsing resume with AI...")
+                config = Config()
+                parse_result = parse_resume_from_text(extracted_text, config)
+                
+                if not parse_result.get("success", False):
+                    st.error(f"Failed to parse resume: {parse_result.get('error', 'Unknown error')}")
+                    # Fallback to basic structure
+                    st.session_state.resume_data = _create_fallback_resume_data(uploaded_file.name, extracted_text)
+                else:
+                    # Use parsed data
+                    parsed_data = parse_result["data"]
+                    st.session_state.resume_data = _convert_parsed_data_to_display_format(parsed_data, uploaded_file.name)
+                    st.success("Resume parsed successfully with AI!")
+                
+                # Clean up temporary file
+                file_handler.delete_file(file_path)
+                
+            except Exception as e:
+                st.error(f"Error processing resume: {str(e)}")
+                # Fallback to basic structure
+                st.session_state.resume_data = _create_fallback_resume_data(uploaded_file.name, "")
+        
+        # Display parsed resume data
+        st.subheader("📋 Parsed Resume Data")
         st.json(st.session_state.resume_data)
         
         # Manual resume entry option
@@ -337,8 +384,11 @@ async def _optimize_resume(
             task_type = "optimize_resume"
         
         # Create task
+        task_id = f"resume_opt_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         task = AgentTask(
+            task_id=task_id,
             task_type=task_type,
+            description=f"Optimize resume for {job_title} at {company_name}",
             input_data={
                 "job_description": job_description,
                 "current_resume": st.session_state.resume_data,
@@ -351,9 +401,8 @@ async def _optimize_resume(
         
         # Create context
         context = AgentContext(
-            session_id=f"resume_opt_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             user_id="streamlit_user",
-            shared_data={"optimization_approach": approach}
+            metadata={"optimization_approach": approach}
         )
         
         # Execute the task
@@ -365,6 +414,102 @@ async def _optimize_resume(
             "success": False,
             "message": f"Optimization failed: {str(e)}"
         }
+
+def _create_fallback_resume_data(filename: str, extracted_text: str) -> Dict[str, Any]:
+    """Create fallback resume data when parsing fails"""
+    # Try to extract basic info from text
+    lines = extracted_text.split('\n') if extracted_text else []
+    
+    # Simple name extraction (assume first non-empty line with proper format)
+    name = "Unknown"
+    email = None
+    phone = None
+    
+    import re
+    for line in lines[:10]:  # Check first 10 lines
+        line = line.strip()
+        if line and len(line.split()) >= 2 and len(line.split()) <= 4:
+            if re.match(r'^[A-Z][a-z]+ [A-Z][a-z]+', line):
+                name = line
+                break
+    
+    # Extract email and phone
+    if extracted_text:
+        email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', extracted_text)
+        if email_match:
+            email = email_match.group()
+        
+        phone_match = re.search(r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b', extracted_text)
+        if phone_match:
+            phone = phone_match.group()
+    
+    return {
+        "name": name,
+        "email": email or "Not found",
+        "phone": phone or "Not found",
+        "professional_summary": "Professional summary not extracted. Please edit manually.",
+        "skills": [],
+        "experience": [],
+        "education": [],
+        "uploaded_file": filename,
+        "upload_date": datetime.now().isoformat(),
+        "parsing_status": "fallback_used",
+        "extracted_text_length": len(extracted_text) if extracted_text else 0
+    }
+
+
+def _convert_parsed_data_to_display_format(parsed_data: Dict[str, Any], filename: str) -> Dict[str, Any]:
+    """Convert AI-parsed data to display format compatible with existing UI"""
+    personal_info = parsed_data.get("personal_info", {})
+    skills_data = parsed_data.get("skills", {})
+    
+    # Flatten skills into a single list for display
+    all_skills = []
+    for skill_category in skills_data.values():
+        if isinstance(skill_category, list):
+            all_skills.extend(skill_category)
+    
+    # Convert experience data
+    experience_list = []
+    for exp in parsed_data.get("experience", []):
+        if isinstance(exp, dict):
+            experience_entry = {
+                "company": exp.get("company", "Unknown Company"),
+                "position": exp.get("position", "Unknown Position"),
+                "duration": f"{exp.get('start_date', 'Unknown')} - {exp.get('end_date', 'Unknown')}",
+                "achievements": exp.get("achievements", [])
+            }
+            if exp.get("description"):
+                if not experience_entry["achievements"]:
+                    experience_entry["achievements"] = [exp["description"]]
+                else:
+                    experience_entry["achievements"].insert(0, exp["description"])
+            experience_list.append(experience_entry)
+    
+    # Convert education data
+    education_list = []
+    for edu in parsed_data.get("education", []):
+        if isinstance(edu, dict):
+            education_list.append({
+                "degree": edu.get("degree", "Unknown Degree"),
+                "school": edu.get("institution", "Unknown School"),
+                "year": edu.get("graduation_date", "Unknown Year")
+            })
+    
+    return {
+        "name": personal_info.get("name", "Unknown"),
+        "email": personal_info.get("email", "Not found"),
+        "phone": personal_info.get("phone", "Not found"),
+        "professional_summary": parsed_data.get("professional_summary", "Not found"),
+        "skills": all_skills,
+        "experience": experience_list,
+        "education": education_list,
+        "uploaded_file": filename,
+        "upload_date": datetime.now().isoformat(),
+        "parsing_status": "ai_parsed",
+        "full_parsed_data": parsed_data  # Keep the full structured data for future use
+    }
+
 
 if __name__ == "__main__":
     show_resume_manager()

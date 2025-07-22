@@ -129,7 +129,9 @@ class BaseAgent(ABC):
             request_data = {
                 "model": model,
                 "input": input_text,
-                "instructions": self.description
+                "instructions": self.description,
+                "temperature": self.app_config.OPENAI_TEMPERATURE,
+                "max_output_tokens": self.app_config.OPENAI_MAX_TOKENS
             }
             
             # Add tools if provided
@@ -140,16 +142,26 @@ class BaseAgent(ABC):
             response = self.openai_client.responses.create(**request_data)
             
             # Extract the text content from the response
-            if hasattr(response, 'output') and response.output:
-                if isinstance(response.output, list) and len(response.output) > 0:
-                    message = response.output[0]
-                    if hasattr(message, 'content') and message.content:
-                        if isinstance(message.content, list) and len(message.content) > 0:
-                            return message.content[0].text
-                        elif hasattr(message.content, 'text'):
-                            return message.content.text
-                return str(response.output)
-            return "No response generated"
+            # The Responses API returns a Response object with output_text attribute
+            if hasattr(response, 'output_text') and response.output_text:
+                return response.output_text
+            elif hasattr(response, 'output') and response.output:
+                # Parse output array for text content
+                for output_item in response.output:
+                    if hasattr(output_item, 'content') and output_item.content:
+                        for content_item in output_item.content:
+                            if hasattr(content_item, 'text') and content_item.text:
+                                return content_item.text
+            elif hasattr(response, 'choices') and response.choices:
+                # Fallback to choices structure if available
+                choice = response.choices[0]
+                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                    return choice.message.content
+            
+            # If we can't parse the response structure, convert to string
+            response_str = str(response)
+            self.logger.warning(f"Unexpected response structure, converting to string: {response_str[:100]}...")
+            return response_str
             
         except Exception as e:
             self.logger.error(f"OpenAI Responses API error: {str(e)}")
@@ -180,27 +192,45 @@ class BaseAgent(ABC):
             request_data = {
                 "model": model,
                 "input": input_text,
-                "instructions": self.description
+                "instructions": self.description,
+                "temperature": self.app_config.OPENAI_TEMPERATURE,
+                "max_output_tokens": self.app_config.OPENAI_MAX_TOKENS
             }
             
             # Add tools if provided
             if tools:
                 request_data["tools"] = tools
             
-            # Make the async Responses API call  
-            response = await self.openai_client.responses.create(**request_data)
+            # Note: The Responses API might not have async support yet
+            # If it fails, we'll fall back to sync call
+            try:
+                response = await self.openai_client.responses.create(**request_data)
+            except AttributeError:
+                # Fallback to sync call if async not available
+                self.logger.warning("Async Responses API not available, using sync call")
+                response = self.openai_client.responses.create(**request_data)
             
             # Extract the text content from the response
-            if hasattr(response, 'output') and response.output:
-                if isinstance(response.output, list) and len(response.output) > 0:
-                    message = response.output[0]
-                    if hasattr(message, 'content') and message.content:
-                        if isinstance(message.content, list) and len(message.content) > 0:
-                            return message.content[0].text
-                        elif hasattr(message.content, 'text'):
-                            return message.content.text
-                return str(response.output)
-            return "No response generated"
+            # The Responses API returns a Response object with output_text attribute
+            if hasattr(response, 'output_text') and response.output_text:
+                return response.output_text
+            elif hasattr(response, 'output') and response.output:
+                # Parse output array for text content
+                for output_item in response.output:
+                    if hasattr(output_item, 'content') and output_item.content:
+                        for content_item in output_item.content:
+                            if hasattr(content_item, 'text') and content_item.text:
+                                return content_item.text
+            elif hasattr(response, 'choices') and response.choices:
+                # Fallback to choices structure if available
+                choice = response.choices[0]
+                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                    return choice.message.content
+            
+            # If we can't parse the response structure, convert to string
+            response_str = str(response)
+            self.logger.warning(f"Unexpected response structure, converting to string: {response_str[:100]}...")
+            return response_str
             
         except Exception as e:
             self.logger.error(f"OpenAI Responses API error: {str(e)}")

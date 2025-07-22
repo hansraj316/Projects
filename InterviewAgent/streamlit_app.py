@@ -63,6 +63,7 @@ def main():
                 "🤖 AI Agents",
                 "📄 Resume Manager", 
                 "🔍 Job Search",
+                "🚀 Automation",
                 "📝 Applications",
                 "📧 Notifications",
                 "⚙️ Settings"
@@ -122,6 +123,9 @@ def main():
     elif page == "🔍 Job Search":
         from pages.job_search import show_job_search
         show_job_search()
+    elif page == "🚀 Automation":
+        from pages.automation import show_automation
+        show_automation()
     elif page == "📝 Applications":
         from pages.applications import show_applications
         show_applications()

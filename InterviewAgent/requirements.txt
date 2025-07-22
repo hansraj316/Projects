@@ -26,9 +26,11 @@ apscheduler>=3.0.0
 requests>=2.25.0
 beautifulsoup4>=4.9.0
 
-# Document Generation
+# Document Processing and Generation
 python-docx>=0.8.0
 reportlab>=3.5.0
+pypdf>=5.0.0
+PyPDF2>=3.0.0
 
 # Utilities
 pydantic>=1.8.0

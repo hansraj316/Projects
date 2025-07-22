@@ -383,8 +383,11 @@ async def _generate_cover_letter(
             task_type = "generate_cover_letter"
         
         # Create task
+        task_id = f"cover_letter_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         task = AgentTask(
+            task_id=task_id,
             task_type=task_type,
+            description=f"Generate cover letter for {job_title} at {company_name}",
             input_data={
                 "job_description": job_description,
                 "company_name": company_name,
@@ -397,9 +400,8 @@ async def _generate_cover_letter(
         
         # Create context
         context = AgentContext(
-            session_id=f"cover_letter_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             user_id="streamlit_user",
-            shared_data={"letter_tone": letter_tone}
+            metadata={"letter_tone": letter_tone}
         )
         
         # Execute the task

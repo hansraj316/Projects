@@ -369,14 +369,7 @@ struct SimpleResourceRow: View {
     }
 }
 
-extension DateFormatter {
-    static let shortDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .none
-        return formatter
-    }()
-}
+
 
 // Preview
 struct LearningPlanListView_Previews: PreviewProvider {
