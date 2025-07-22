@@ -11,12 +11,12 @@ from dataclasses import dataclass
 import uuid
 import json
 
-from .base_agent import BaseAgent, AgentTask, AgentContext
-from .job_discovery import JobDiscoveryAgent
-from .resume_optimizer import ResumeOptimizerAgent
-from .cover_letter_generator import CoverLetterAgent
-from .application_submitter import ApplicationSubmitterAgent
-from .email_notification import EmailNotificationAgent
+from agents.base_agent import BaseAgent, AgentTask, AgentContext
+from agents.job_discovery import JobDiscoveryAgent
+from agents.resume_optimizer import ResumeOptimizerAgent
+from agents.cover_letter_generator import CoverLetterAgent
+from agents.application_submitter import ApplicationSubmitterAgent
+from agents.email_notification import EmailNotificationAgent
 
 
 @dataclass

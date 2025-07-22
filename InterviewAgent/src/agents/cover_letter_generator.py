@@ -6,7 +6,8 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 
-from .base_agent import BaseAgent, AgentTask, AgentContext
+from agents.base_agent import BaseAgent, AgentTask, AgentContext
+from utils.document_generator import DocumentGenerator
 
 
 class CoverLetterAgent(BaseAgent):
@@ -20,6 +21,9 @@ class CoverLetterAgent(BaseAgent):
             description="You are an expert career consultant and professional writer specializing in compelling, personalized cover letters. You create letters that address specific job requirements, highlight relevant achievements, show genuine company interest, and demonstrate cultural fit. You can research companies and industry trends to make letters more compelling.",
             config=config
         )
+        
+        # Initialize document generator
+        self.document_generator = DocumentGenerator()
     
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
         """
@@ -139,6 +143,23 @@ class CoverLetterAgent(BaseAgent):
         # Calculate quality metrics
         quality_score = self._calculate_quality_score(ai_response, job_description)
         
+        # Generate document files (PDF and DOCX)
+        job_details = {
+            "company_name": company_name,
+            "job_title": job_title,
+            "hiring_manager": hiring_manager
+        }
+        
+        pdf_result = self.document_generator.generate_cover_letter_pdf(cover_letter_data, job_details)
+        docx_result = self.document_generator.generate_cover_letter_docx(cover_letter_data, job_details)
+        
+        # Prepare file paths for result
+        generated_files = {}
+        if pdf_result.get("success"):
+            generated_files["pdf"] = pdf_result
+        if docx_result.get("success"):
+            generated_files["docx"] = docx_result
+        
         return self.create_result(
             success=True,
             data={
@@ -146,7 +167,9 @@ class CoverLetterAgent(BaseAgent):
                 "quality_score": quality_score,
                 "word_count": len(ai_response.split()),
                 "key_points": self._extract_key_points(ai_response),
-                "personalization_elements": self._identify_personalization(ai_response, company_name, job_title)
+                "personalization_elements": self._identify_personalization(ai_response, company_name, job_title),
+                "generated_files": generated_files,
+                "cover_letter_file_path": pdf_result.get("file_path") if pdf_result.get("success") else None
             },
             message="Cover letter successfully generated",
             metadata={
@@ -244,6 +267,23 @@ class CoverLetterAgent(BaseAgent):
         # Calculate quality metrics
         quality_score = self._calculate_quality_score(ai_response, job_description)
         
+        # Generate document files (PDF and DOCX)
+        job_details = {
+            "company_name": company_name,
+            "job_title": job_title,
+            "hiring_manager": hiring_manager
+        }
+        
+        pdf_result = self.document_generator.generate_cover_letter_pdf(cover_letter_data, job_details)
+        docx_result = self.document_generator.generate_cover_letter_docx(cover_letter_data, job_details)
+        
+        # Prepare file paths for result
+        generated_files = {}
+        if pdf_result.get("success"):
+            generated_files["pdf"] = pdf_result
+        if docx_result.get("success"):
+            generated_files["docx"] = docx_result
+        
         return self.create_result(
             success=True,
             data={
@@ -253,7 +293,9 @@ class CoverLetterAgent(BaseAgent):
                 "word_count": len(ai_response.split()),
                 "key_points": self._extract_key_points(ai_response),
                 "personalization_elements": self._identify_personalization(ai_response, company_name, job_title),
-                "research_insights": self._extract_research_insights(company_research)
+                "research_insights": self._extract_research_insights(company_research),
+                "generated_files": generated_files,
+                "cover_letter_file_path": pdf_result.get("file_path") if pdf_result.get("success") else None
             },
             message="Cover letter successfully generated with company research",
             metadata={

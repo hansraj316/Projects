@@ -9,8 +9,9 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import uuid
 
-from .orchestrator import OrchestratorAgent, Workflow
-from .base_agent import AgentContext
+from agents.orchestrator import OrchestratorAgent, Workflow
+from agents.enhanced_orchestrator import EnhancedOrchestratorAgent, EnhancedWorkflow
+from agents.base_agent import AgentContext
 from database.operations import get_db_operations
 from config import get_config
 

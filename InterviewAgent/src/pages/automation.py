@@ -29,7 +29,8 @@ def show_automation():
         
         # Start scheduler in background
         try:
-            asyncio.run(st.session_state.automation_scheduler.start_scheduler())
+            from utils.async_utils import run_async_in_streamlit
+            run_async_in_streamlit(st.session_state.automation_scheduler.start_scheduler())
         except Exception as e:
             st.error(f"Failed to start scheduler: {str(e)}")
     
@@ -164,7 +165,7 @@ def _show_start_automation():
             st.info("💡 No saved jobs found. Go to Job Search and save some jobs first!")
             
             if st.button("🔍 Go to Job Search"):
-                st.switch_page("pages/job_search.py")
+                st.switch_page("src/pages/job_search.py")
     
     else:
         st.info("🔍 No jobs discovered yet. Start by searching for jobs!")
@@ -650,12 +651,14 @@ def _schedule_automation_job(schedule_type: str, schedule_config: Dict[str, Any]
             full_config = {**schedule_config, **automation_config}
             
             # Schedule based on type
+            from utils.async_utils import run_async_in_streamlit
+            
             if schedule_type == "Daily":
-                result = asyncio.run(scheduler.schedule_daily_automation(user_id, full_config))
+                result = run_async_in_streamlit(scheduler.schedule_daily_automation(user_id, full_config))
             elif schedule_type == "Weekly":
-                result = asyncio.run(scheduler.schedule_weekly_automation(user_id, full_config))
+                result = run_async_in_streamlit(scheduler.schedule_weekly_automation(user_id, full_config))
             else:  # One-time
-                result = asyncio.run(scheduler.schedule_one_time_automation(user_id, full_config, schedule_config["run_at"]))
+                result = run_async_in_streamlit(scheduler.schedule_one_time_automation(user_id, full_config, schedule_config["run_at"]))
             
             if result["success"]:
                 st.success(f"✅ {schedule_type} automation scheduled successfully!")
@@ -678,7 +681,8 @@ def _cancel_scheduled_job(job_id: str):
     """Cancel a scheduled automation job"""
     try:
         scheduler = st.session_state.automation_scheduler
-        result = asyncio.run(scheduler.cancel_scheduled_job(job_id))
+        from utils.async_utils import run_async_in_streamlit
+        result = run_async_in_streamlit(scheduler.cancel_scheduled_job(job_id))
         
         if result["success"]:
             st.success("✅ Scheduled job cancelled successfully!")

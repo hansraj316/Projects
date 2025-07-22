@@ -43,7 +43,7 @@ def start_streamlit():
     
     try:
         subprocess.run([
-            "streamlit", "run", "streamlit_app.py",
+            sys.executable, "-m", "streamlit", "run", "streamlit_app.py",
             "--server.port", "8501",
             "--browser.gatherUsageStats", "false"
         ])

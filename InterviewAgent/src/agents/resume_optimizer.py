@@ -5,8 +5,10 @@ Resume Optimization Agent - AI-powered resume customization for specific job lis
 import json
 from typing import Dict, Any, List
 from datetime import datetime
+import tempfile
 
-from .base_agent import BaseAgent, AgentTask, AgentContext
+from agents.base_agent import BaseAgent, AgentTask, AgentContext
+from utils.document_generator import DocumentGenerator
 
 
 class ResumeOptimizerAgent(BaseAgent):
@@ -20,6 +22,9 @@ class ResumeOptimizerAgent(BaseAgent):
             description="You are an expert resume writer and career consultant with deep knowledge of ATS systems, industry trends, and hiring practices. You optimize resumes for specific job listings by analyzing requirements, identifying key skills, and ensuring ATS-friendly formatting. You can search for industry trends and salary data when needed.",
             config=config
         )
+        
+        # Initialize document generator
+        self.document_generator = DocumentGenerator()
     
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
         """
@@ -117,6 +122,22 @@ class ResumeOptimizerAgent(BaseAgent):
         # Generate the optimized resume data
         optimized_resume = self._apply_optimizations(current_resume, optimized_content)
         
+        # Generate document files (PDF and DOCX)
+        job_details = {
+            "company_name": company_name,
+            "job_title": job_title
+        }
+        
+        pdf_result = self.document_generator.generate_resume_pdf(optimized_resume, job_details)
+        docx_result = self.document_generator.generate_resume_docx(optimized_resume, job_details)
+        
+        # Prepare file paths for result
+        generated_files = {}
+        if pdf_result.get("success"):
+            generated_files["pdf"] = pdf_result
+        if docx_result.get("success"):
+            generated_files["docx"] = docx_result
+        
         return self.create_result(
             success=True,
             data={
@@ -124,7 +145,9 @@ class ResumeOptimizerAgent(BaseAgent):
                 "optimization_summary": optimized_content,
                 "job_match_score": self._calculate_match_score(job_description, optimized_resume),
                 "keywords_added": optimized_content.get("keywords", []),
-                "changes_made": optimized_content.get("changes", [])
+                "changes_made": optimized_content.get("changes", []),
+                "generated_files": generated_files,
+                "resume_file_path": pdf_result.get("file_path") if pdf_result.get("success") else None
             },
             message="Resume successfully optimized for job listing",
             metadata={
@@ -208,6 +231,23 @@ class ResumeOptimizerAgent(BaseAgent):
         # Generate the optimized resume data
         optimized_resume = self._apply_optimizations(current_resume, optimized_content)
         
+        # Generate document files (PDF and DOCX)
+        job_details = {
+            "company_name": company_name,
+            "job_title": job_title,
+            "industry": industry
+        }
+        
+        pdf_result = self.document_generator.generate_resume_pdf(optimized_resume, job_details)
+        docx_result = self.document_generator.generate_resume_docx(optimized_resume, job_details)
+        
+        # Prepare file paths for result
+        generated_files = {}
+        if pdf_result.get("success"):
+            generated_files["pdf"] = pdf_result
+        if docx_result.get("success"):
+            generated_files["docx"] = docx_result
+        
         return self.create_result(
             success=True,
             data={
@@ -217,7 +257,9 @@ class ResumeOptimizerAgent(BaseAgent):
                 "job_match_score": self._calculate_match_score(job_description, optimized_resume),
                 "keywords_added": optimized_content.get("keywords", []),
                 "changes_made": optimized_content.get("changes", []),
-                "salary_insights": optimized_content.get("salary_insights", "")
+                "salary_insights": optimized_content.get("salary_insights", ""),
+                "generated_files": generated_files,
+                "resume_file_path": pdf_result.get("file_path") if pdf_result.get("success") else None
             },
             message="Resume successfully optimized with industry research",
             metadata={
