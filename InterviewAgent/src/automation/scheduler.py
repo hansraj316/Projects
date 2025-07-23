@@ -367,7 +367,7 @@ class AutomationScheduler:
                 self.logger.warning(f"No jobs found for user {user_id} scheduled automation")
                 return
             
-            # Start automation process
+            # Start enhanced automation process
             automation_result = await self.automation_controller.start_job_application_automation(
                 user_id=user_id,
                 job_search_results=job_search_results,

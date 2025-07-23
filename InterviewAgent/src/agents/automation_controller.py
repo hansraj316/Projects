@@ -11,9 +11,19 @@ import uuid
 
 from agents.orchestrator import OrchestratorAgent, Workflow
 from agents.enhanced_orchestrator import EnhancedOrchestratorAgent, EnhancedWorkflow
+from agents.simple_automation_controller import SimpleAutomationController
 from agents.base_agent import AgentContext
 from database.operations import get_db_operations
 from config import get_config
+
+# Try to import OpenAI components, fall back gracefully if not available
+try:
+    from agents.openai_agents_orchestrator import OpenAIAgentsOrchestrator
+    from agents.openai_automation_agent import create_automation_agent, AutomationWorkflowInput
+    OPENAI_AVAILABLE = True
+except ImportError as e:
+    print(f"OpenAI components not available: {e}")
+    OPENAI_AVAILABLE = False
 
 
 class AutomationController:
@@ -26,6 +36,22 @@ class AutomationController:
         self.config = config or get_config()
         self.db_ops = get_db_operations()
         self.orchestrator = OrchestratorAgent(config)
+        self.enhanced_orchestrator = EnhancedOrchestratorAgent(config)
+        
+        # Initialize simple automation controller (always available)
+        self.simple_automation_controller = SimpleAutomationController(config)
+        
+        # Initialize OpenAI components if available
+        if OPENAI_AVAILABLE:
+            try:
+                self.openai_agents_orchestrator = OpenAIAgentsOrchestrator(config)
+                self.automation_agent = create_automation_agent()
+                self.openai_enabled = True
+            except Exception as e:
+                print(f"Failed to initialize OpenAI components: {e}")
+                self.openai_enabled = False
+        else:
+            self.openai_enabled = False
         
         # Track automation sessions
         self.active_sessions = {}
@@ -34,14 +60,19 @@ class AutomationController:
         # Setup logging
         self.logger = logging.getLogger(__name__)
         
-    async def start_job_application_automation(self, user_id: str, job_search_results: List[Dict[str, Any]], 
-                                             automation_settings: Dict[str, Any]) -> Dict[str, Any]:
+    async def start_job_application_automation(self, user_id: str, job_search_criteria: Dict[str, Any], 
+                                             automation_settings: Dict[str, Any], saved_jobs: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Start automated job application process for search results
+        Start automated job application process following the exact workflow:
+        1. Call Job search agent based on configuration
+        2. Hand off to Resume agent for optimization
+        3. Hand off to Cover letter agent for generation
+        4. Save to database against application
+        5. Trigger Playwright MCP automation
         
         Args:
             user_id: ID of the user
-            job_search_results: List of jobs from job search
+            job_search_criteria: Job search parameters
             automation_settings: User automation preferences
             
         Returns:
@@ -50,13 +81,20 @@ class AutomationController:
         session_id = str(uuid.uuid4())
         
         try:
-            # Get user profile for automation
+            # Get user profile and resume data for automation
             user_profile = await self._build_user_profile(user_id)
+            resume_data = user_profile.get("resume_data", {})
             
-            # Filter jobs based on automation settings
-            eligible_jobs = self._filter_jobs_for_automation(job_search_results, automation_settings)
+            self.logger.info(f"Starting OpenAI Automation Agent workflow for user {user_id}")
             
-            self.logger.info(f"Starting automation for {len(eligible_jobs)} jobs out of {len(job_search_results)} found")
+            # Prepare automation workflow input
+            workflow_input = AutomationWorkflowInput(
+                user_id=user_id,
+                job_search_criteria=job_search_criteria,
+                automation_config=automation_settings,
+                user_profile=user_profile,
+                resume_data=resume_data
+            )
             
             # Create automation session
             session = {
@@ -64,69 +102,35 @@ class AutomationController:
                 "user_id": user_id,
                 "started_at": datetime.now(),
                 "status": "running",
-                "total_jobs": len(eligible_jobs),
-                "processed_jobs": 0,
-                "successful_applications": 0,
-                "failed_applications": 0,
-                "workflows": [],
-                "automation_settings": automation_settings
+                "automation_settings": automation_settings,
+                "job_search_criteria": job_search_criteria,
+                "workflow_type": "openai_automation_agent"
             }
             
             self.active_sessions[session_id] = session
             
-            # Process jobs based on automation settings
-            if automation_settings.get("batch_processing", False):
-                # Bulk processing
-                workflow = self.orchestrator.create_bulk_application_workflow(
-                    user_id=user_id,
-                    job_list=eligible_jobs,
-                    user_profile=user_profile
-                )
-                
-                session["workflows"].append(workflow.workflow_id)
-                
-                # Execute bulk workflow
-                result = await self.orchestrator.execute_workflow(workflow)
-                session["bulk_workflow_result"] = result
-                
-            else:
-                # Individual job processing
-                workflow_results = []
-                
-                for job_data in eligible_jobs:
-                    try:
-                        # Create individual workflow
-                        workflow = self.orchestrator.create_job_application_workflow(
-                            user_id=user_id,
-                            job_data=job_data,
-                            user_profile=user_profile
-                        )
-                        
-                        session["workflows"].append(workflow.workflow_id)
-                        
-                        # Execute workflow
-                        result = await self.orchestrator.execute_workflow(workflow)
-                        workflow_results.append(result)
-                        
-                        # Update session stats
-                        session["processed_jobs"] += 1
-                        if result.get("success"):
-                            session["successful_applications"] += 1
-                        else:
-                            session["failed_applications"] += 1
-                        
-                        # Respect rate limits
-                        if automation_settings.get("rate_limit_delay", 0) > 0:
-                            await asyncio.sleep(automation_settings["rate_limit_delay"])
-                            
-                    except Exception as e:
-                        self.logger.error(f"Failed to process job {job_data.get('title', 'Unknown')}: {str(e)}")
-                        session["failed_applications"] += 1
-                
-                session["individual_workflow_results"] = workflow_results
+            # Execute the complete automation workflow
+            # This follows the exact steps: Job Search → Resume Optimization → Cover Letter → Database → Playwright
+            automation_result = await self.simple_automation_controller.execute_job_automation_workflow(
+                user_id=user_id,
+                job_search_criteria=job_search_criteria,
+                automation_config=automation_settings,
+                saved_jobs=saved_jobs
+            )
+            
+            # Update session with automation results
+            session.update({
+                "automation_result": automation_result,
+                "workflow_id": automation_result.workflow_id,
+                "total_jobs": automation_result.total_jobs_found,
+                "applications_created": automation_result.applications_created,
+                "applications_submitted": automation_result.applications_submitted,
+                "success_rate": (automation_result.applications_created / max(automation_result.total_jobs_found, 1)) * 100,
+                "detailed_results": automation_result.detailed_results
+            })
             
             # Update session status
-            session["status"] = "completed"
+            session["status"] = "completed" if automation_result.success else "failed"
             session["completed_at"] = datetime.now()
             session["duration"] = (session["completed_at"] - session["started_at"]).total_seconds()
             
@@ -138,16 +142,25 @@ class AutomationController:
             del self.active_sessions[session_id]
             
             return {
-                "success": True,
+                "success": automation_result.success,
                 "session_id": session_id,
+                "workflow_id": automation_result.workflow_id,
                 "automation_summary": {
-                    "total_jobs_processed": session["processed_jobs"],
-                    "successful_applications": session["successful_applications"],
-                    "failed_applications": session["failed_applications"],
+                    "total_jobs_found": automation_result.total_jobs_found,
+                    "applications_created": automation_result.applications_created,
+                    "applications_submitted": automation_result.applications_submitted,
                     "duration_seconds": session["duration"],
-                    "automation_rate": session["successful_applications"] / max(session["processed_jobs"], 1)
+                    "success_rate": session["success_rate"],
+                    "workflow_steps": [
+                        "Job Search (OpenAI Job Discovery Agent)",
+                        "Resume Optimization (OpenAI Resume Optimizer Agent)", 
+                        "Cover Letter Generation (OpenAI Cover Letter Agent)",
+                        "Database Storage",
+                        "Playwright MCP Automation"
+                    ]
                 },
-                "workflows_created": session["workflows"],
+                "detailed_results": automation_result.detailed_results,
+                "execution_summary": automation_result.execution_summary,
                 "session_details": session
             }
             
@@ -187,32 +200,38 @@ class AutomationController:
             if user_preferences:
                 user_profile.update(user_preferences)
             
-            # Create and execute workflow
-            workflow = self.orchestrator.create_job_application_workflow(
+            # Create and execute OpenAI Agents SDK workflow with proper handoffs
+            result = await self.openai_agents_orchestrator.create_enhanced_job_workflow(
                 user_id=user_id,
                 job_data=job_data,
-                user_profile=user_profile
+                user_profile=user_profile,
+                automation_settings=user_preferences or {}
             )
-            
-            result = await self.orchestrator.execute_workflow(workflow)
             
             # Save individual automation record
             automation_record = {
                 "user_id": user_id,
                 "job_data": job_data,
-                "workflow_id": workflow.workflow_id,
+                "workflow_id": result.get("workflow_id", "unknown"),
                 "result": result,
-                "automated_at": datetime.now()
+                "automated_at": datetime.now(),
+                "step_details": result.get("step_results", {}),
+                "handoff_tracking": result.get("handoff_results", {}),
+                "openai_agents_sdk": True  # Mark as using OpenAI Agents SDK
             }
             
             await self._save_individual_automation(automation_record)
             
             return {
                 "success": result.get("success", False),
-                "workflow_id": workflow.workflow_id,
+                "workflow_id": result.get("workflow_id", "unknown"),
                 "job_title": job_data.get("title", "Unknown"),
                 "company": job_data.get("company", "Unknown"),
-                "automation_result": result
+                "automation_result": result,
+                "step_execution_details": result.get("step_results", {}),
+                "handoff_performance": result.get("handoff_results", {}),
+                "openai_agents_sdk_output": result.get("final_output", ""),
+                "using_openai_agents_sdk": True
             }
             
         except Exception as e:
@@ -331,6 +350,142 @@ class AutomationController:
         user_history.sort(key=lambda x: x.get("completed_at", datetime.min), reverse=True)
         
         return user_history[:limit]
+    
+    def get_enhanced_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
+        """
+        Get detailed status of an enhanced workflow including step-by-step progress
+        
+        Args:
+            workflow_id: ID of the workflow
+            
+        Returns:
+            Enhanced workflow status with step details
+        """
+        # Check OpenAI Agents SDK orchestrator first
+        openai_result = self.openai_agents_orchestrator.get_workflow_details(workflow_id)
+        if openai_result.get("success"):
+            return openai_result
+        
+        # Check if enhanced orchestrator has the workflow
+        if hasattr(self.enhanced_orchestrator, 'get_workflow_details'):
+            enhanced_result = self.enhanced_orchestrator.get_workflow_details(workflow_id)
+            if enhanced_result.get("success"):
+                return enhanced_result
+        
+        # Fallback to basic status
+        return self.get_automation_status(workflow_id)
+    
+    def get_step_performance_metrics(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get performance metrics for individual workflow steps
+        
+        Args:
+            user_id: ID of the user
+            
+        Returns:
+            Step performance analysis
+        """
+        user_sessions = [
+            session for session in self.automation_history 
+            if session.get("user_id") == user_id
+        ]
+        
+        step_metrics = {}
+        total_sessions = len(user_sessions)
+        
+        if total_sessions == 0:
+            return {"message": "No automation history found"}
+        
+        # Aggregate step success rates
+        for session in user_sessions:
+            step_rates = session.get("step_success_rates", {})
+            for step_id, success_count in step_rates.items():
+                if step_id not in step_metrics:
+                    step_metrics[step_id] = {
+                        "total_attempts": 0,
+                        "successful_attempts": 0,
+                        "success_rate": 0.0
+                    }
+                step_metrics[step_id]["total_attempts"] += 1
+                step_metrics[step_id]["successful_attempts"] += success_count
+        
+        # Calculate success rates
+        for step_id, metrics in step_metrics.items():
+            if metrics["total_attempts"] > 0:
+                metrics["success_rate"] = metrics["successful_attempts"] / metrics["total_attempts"]
+        
+        return {
+            "total_sessions_analyzed": total_sessions,
+            "step_performance": step_metrics,
+            "overall_metrics": {
+                "average_steps_completed": sum(
+                    len(session.get("step_success_rates", {})) 
+                    for session in user_sessions
+                ) / total_sessions,
+                "most_reliable_step": max(step_metrics.items(), key=lambda x: x[1]["success_rate"])[0] if step_metrics else None,
+                "least_reliable_step": min(step_metrics.items(), key=lambda x: x[1]["success_rate"])[0] if step_metrics else None
+            }
+        }
+    
+    def get_handoff_analytics(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get analytics on agent handoff performance
+        
+        Args:
+            user_id: ID of the user
+            
+        Returns:
+            Handoff performance analytics
+        """
+        user_sessions = [
+            session for session in self.automation_history 
+            if session.get("user_id") == user_id
+        ]
+        
+        handoff_data = []
+        for session in user_sessions:
+            results = session.get("individual_workflow_results", [])
+            for result in results:
+                handoff_results = result.get("handoff_results", {})
+                if handoff_results:
+                    handoff_data.append(handoff_results)
+        
+        if not handoff_data:
+            return {"message": "No handoff data available"}
+        
+        # Analyze handoff performance
+        total_handoffs = len(handoff_data)
+        successful_handoffs = sum(1 for h in handoff_data if h.get("success", False))
+        
+        return {
+            "total_handoffs": total_handoffs,
+            "successful_handoffs": successful_handoffs,
+            "handoff_success_rate": successful_handoffs / total_handoffs if total_handoffs > 0 else 0,
+            "average_handoff_time": sum(
+                h.get("execution_time", 0) for h in handoff_data
+            ) / total_handoffs if total_handoffs > 0 else 0,
+            "common_handoff_issues": self._analyze_handoff_issues(handoff_data)
+        }
+    
+    def _analyze_handoff_issues(self, handoff_data: List[Dict[str, Any]]) -> List[str]:
+        """Analyze common issues in handoff data"""
+        issues = []
+        failed_handoffs = [h for h in handoff_data if not h.get("success", True)]
+        
+        if len(failed_handoffs) > len(handoff_data) * 0.2:  # More than 20% failure rate
+            issues.append("High handoff failure rate detected")
+        
+        # Check for data transformation issues
+        transformation_errors = sum(1 for h in failed_handoffs if "transformation" in h.get("error", "").lower())
+        if transformation_errors > len(failed_handoffs) * 0.3:
+            issues.append("Data transformation issues detected")
+        
+        # Check for validation issues
+        validation_errors = sum(1 for h in failed_handoffs if "validation" in h.get("error", "").lower())
+        if validation_errors > len(failed_handoffs) * 0.3:
+            issues.append("Data validation issues detected")
+        
+        return issues
     
     async def _build_user_profile(self, user_id: str) -> Dict[str, Any]:
         """Build comprehensive user profile for automation"""

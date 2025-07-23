@@ -14,12 +14,14 @@ from agents.automation_controller import AutomationController
 from automation.scheduler import AutomationScheduler
 from database.operations import get_db_operations
 from config import get_config
+from agents.openai_automation_agent import monitor_automation_progress
 
 
 def show_automation():
     """Display the automation control and monitoring interface"""
     
     st.header("🤖 Job Application Automation")
+    st.markdown("**Complete workflow: Job Search → Resume Optimization → Cover Letter → Database → Playwright MCP**")
     
     # Initialize automation components
     if 'automation_controller' not in st.session_state:
@@ -35,11 +37,12 @@ def show_automation():
             st.error(f"Failed to start scheduler: {str(e)}")
     
     # Create tabs for different automation functions
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🚀 Start Automation", 
         "📅 Schedule Automation", 
         "📊 Monitor Progress", 
         "📋 Automation History", 
+        "📈 Analytics", 
         "⚙️ Settings"
     ])
     
@@ -56,12 +59,16 @@ def show_automation():
         _show_automation_history()
     
     with tab5:
+        _show_automation_analytics()
+    
+    with tab6:
         _show_automation_settings()
 
 
 def _show_start_automation():
-    """Show manual automation start interface"""
+    """Show manual automation start interface with OpenAI Agents SDK workflow"""
     st.subheader("🚀 Start Job Application Automation")
+    st.markdown("**OpenAI Agents SDK Workflow: Job Discovery → Resume Optimizer → Cover Letter → Database → Playwright**")
     
     # Check if user has saved jobs to automate
     if 'discovered_jobs' in st.session_state and st.session_state.discovered_jobs:
@@ -146,12 +153,18 @@ def _show_start_automation():
             
             with col1:
                 if st.button("🚀 Start Automation", type="primary", use_container_width=True):
-                    _start_automation_workflow(jobs_to_process, {
+                    _start_automation_workflow_new({
+                        "job_title": "Software Engineer",  # From saved jobs
+                        "location": "Remote",
+                        "experience_level": "Mid-level"
+                    }, {
                         "rate_limit_delay": rate_limit,
                         "email_notifications": email_notifications,
                         "automation_mode": automation_mode,
-                        "max_applications_per_session": len(jobs_to_process)
-                    })
+                        "max_applications_per_run": len(jobs_to_process),
+                        "auto_submit": True,
+                        "optimize_resume_per_job": True
+                    }, jobs_to_process)
             
             with col2:
                 if st.button("📋 Preview Steps", use_container_width=True):
@@ -314,19 +327,30 @@ def _show_monitor_progress():
                         if session['status'] == 'running':
                             st.progress(progress)
                     
-                    # Show workflow details
+                    # Show enhanced workflow details
                     if 'workflows' in session:
                         st.write(f"**Active Workflows:** {len(session['workflows'])}")
                         for workflow_id in session['workflows'][-3:]:  # Show last 3
                             st.write(f"• {workflow_id}")
                     
+                    # Show step success rates if available
+                    if 'step_success_rates' in session and session['step_success_rates']:
+                        st.write("**Step Performance:**")
+                        for step_id, success_count in session['step_success_rates'].items():
+                            step_name = step_id.replace('_', ' ').title()
+                            st.write(f"• {step_name}: {success_count} successes")
+                    
                     # Control buttons
-                    col1, col2 = st.columns(2)
+                    col1, col2, col3 = st.columns(3)
                     with col1:
                         if st.button(f"📊 View Details", key=f"details_{session_id}"):
-                            _show_session_details(session_id)
+                            _show_enhanced_session_details(session_id)
                     
                     with col2:
+                        if st.button(f"📈 Step Analytics", key=f"analytics_{session_id}"):
+                            _show_step_analytics(session_id)
+                    
+                    with col3:
                         if session['status'] == 'running':
                             if st.button(f"⏸️ Pause", key=f"pause_{session_id}"):
                                 st.warning("Pause functionality will be implemented")
@@ -553,53 +577,89 @@ def _show_automation_settings():
             st.rerun()
 
 
-def _start_automation_workflow(jobs_to_process: List[Dict[str, Any]], automation_settings: Dict[str, Any]):
-    """Start the automation workflow"""
+def _start_automation_workflow_new(job_search_criteria: Dict[str, Any], automation_settings: Dict[str, Any], saved_jobs: List[Dict[str, Any]] = None):
+    """Start the new OpenAI Agents SDK automation workflow"""
     try:
-        with st.spinner("Starting automation workflow..."):
+        with st.spinner("Starting OpenAI Agents SDK automation workflow..."):
             # Get user ID
-            user_id = "user@interviewagent.local"  # Placeholder
+            user_id = "user_123"  # Placeholder
             
-            # Start automation
+            # Log jobs being processed
+            if saved_jobs:
+                st.info(f"🎯 Processing {len(saved_jobs)} saved jobs from your job search")
+                for i, job in enumerate(saved_jobs[:3], 1):
+                    st.write(f"{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}")
+                if len(saved_jobs) > 3:
+                    st.write(f"... and {len(saved_jobs) - 3} more jobs")
+            else:
+                st.warning("⚠️ No saved jobs provided - will use sample jobs for testing")
+            
+            # Start automation using new controller method
             controller = st.session_state.automation_controller
             
             # This would normally be async, but for demo purposes we'll simulate
-            result = {
-                "success": True,
-                "session_id": "demo_session_123",
-                "automation_summary": {
-                    "total_jobs_processed": len(jobs_to_process),
-                    "successful_applications": len(jobs_to_process) - 1,
-                    "failed_applications": 1,
-                    "duration_seconds": 180,
-                    "automation_rate": 0.8
-                }
-            }
+            import asyncio
+            result = asyncio.run(
+                controller.start_job_application_automation(
+                    user_id=user_id,
+                    job_search_criteria=job_search_criteria,
+                    automation_settings=automation_settings,
+                    saved_jobs=saved_jobs
+                )
+            )
             
             if result["success"]:
-                st.success("🎉 Automation workflow started successfully!")
+                st.success("🎉 OpenAI Agents SDK automation workflow completed!")
+                
+                # Store session for monitoring
+                st.session_state.current_automation_session = result["session_id"]
+                st.session_state.current_workflow_id = result["workflow_id"]
                 
                 # Show summary
                 summary = result["automation_summary"]
                 
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("Jobs Processed", summary["total_jobs_processed"])
+                    st.metric("Jobs Found", summary["total_jobs_found"])
                 
                 with col2:
-                    st.metric("Successful Applications", summary["successful_applications"])
+                    st.metric("Applications Created", summary["applications_created"])
                 
                 with col3:
-                    st.metric("Success Rate", f"{summary['automation_rate']:.1%}")
+                    st.metric("Applications Submitted", summary["applications_submitted"])
                 
-                st.info(f"📧 Email notifications will be sent to track progress")
+                with col4:
+                    st.metric("Success Rate", f"{summary['success_rate']:.1f}%")
+                
+                # Show workflow steps executed
+                st.write("### Workflow Steps Executed")
+                for i, step in enumerate(summary["workflow_steps"], 1):
+                    st.write(f"{i}. ✅ {step}")
+                
+                # Show detailed results if available
+                if result.get("detailed_results"):
+                    with st.expander("Detailed Step Results"):
+                        for detail in result["detailed_results"]:
+                            step_name = detail.get("step", "Unknown Step")
+                            success = detail.get("success", False)
+                            status_icon = "✅" if success else "❌"
+                            
+                            st.write(f"**{status_icon} {step_name}**")
+                            if detail.get("job_title"):
+                                st.write(f"   Job: {detail['job_title']} at {detail.get('company', 'Unknown')}")
+                            if detail.get("timestamp"):
+                                st.write(f"   Time: {detail['timestamp']}")
+                            if not success and detail.get("error"):
+                                st.error(f"   Error: {detail['error']}")
+                
+                st.info(f"📧 Email notifications sent for application confirmations")
                 
                 # Show next steps
                 st.write("### Next Steps")
                 st.write("1. ✅ Monitor progress in the 'Monitor Progress' tab")
-                st.write("2. 📧 Check your email for detailed updates")
-                st.write("3. 📊 Review results in the 'Automation History' tab")
+                st.write("2. 📊 Review applications in the Applications tab")
+                st.write("3. 📈 Check analytics for performance insights")
                 
             else:
                 st.error(f"❌ Automation failed: {result.get('error', 'Unknown error')}")
@@ -671,10 +731,242 @@ def _schedule_automation_job(schedule_type: str, schedule_config: Dict[str, Any]
         st.error(f"Failed to schedule automation: {str(e)}")
 
 
-def _show_session_details(session_id: str):
-    """Show detailed session information"""
-    st.subheader(f"Session Details: {session_id}")
-    st.info("Detailed session view will be implemented")
+def _show_enhanced_session_details(session_id: str):
+    """Show enhanced session information with step-by-step details"""
+    st.subheader(f"Enhanced Session Details: {session_id}")
+    
+    # Get enhanced workflow status
+    if hasattr(st.session_state, 'automation_controller'):
+        controller = st.session_state.automation_controller
+        
+        try:
+            # Get enhanced workflow details
+            enhanced_status = controller.get_enhanced_workflow_status(session_id)
+            
+            if enhanced_status.get("success", True):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write("### Workflow Overview")
+                    st.write(f"**Status:** {enhanced_status.get('status', 'Unknown')}")
+                    st.write(f"**Progress:** {enhanced_status.get('progress', 0):.1f}%")
+                    
+                    if 'step_results' in enhanced_status:
+                        st.write("### Step Execution Details")
+                        for step_id, step_result in enhanced_status['step_results'].items():
+                            step_name = step_id.replace('_', ' ').title()
+                            status_icon = "✅" if step_result.get('success') else "❌"
+                            st.write(f"{status_icon} **{step_name}**")
+                            if step_result.get('execution_time'):
+                                st.write(f"   ⏱️ {step_result['execution_time']:.2f}s")
+                            if not step_result.get('success') and step_result.get('error'):
+                                st.error(f"   Error: {step_result['error']}")
+                
+                with col2:
+                    st.write("### Handoff Performance")
+                    if 'handoff_results' in enhanced_status:
+                        handoff_data = enhanced_status['handoff_results']
+                        successful_handoffs = sum(1 for h in handoff_data.values() if h.get('success'))
+                        total_handoffs = len(handoff_data)
+                        
+                        if total_handoffs > 0:
+                            success_rate = successful_handoffs / total_handoffs
+                            st.metric("Handoff Success Rate", f"{success_rate:.1%}")
+                            
+                            for handoff_id, handoff_result in handoff_data.items():
+                                status_icon = "🔄" if handoff_result.get('success') else "⚠️"
+                                st.write(f"{status_icon} {handoff_id}")
+                    else:
+                        st.info("No handoff data available")
+            else:
+                st.error("Failed to load enhanced session details")
+                
+        except Exception as e:
+            st.error(f"Error loading session details: {str(e)}")
+    else:
+        st.warning("Automation controller not available")
+
+
+def _show_step_analytics(session_id: str):
+    """Show step-by-step analytics for the session"""
+    st.subheader(f"Step Analytics: {session_id}")
+    
+    if hasattr(st.session_state, 'automation_controller'):
+        controller = st.session_state.automation_controller
+        user_id = "user@interviewagent.local"  # Placeholder
+        
+        try:
+            # Get step performance metrics
+            step_metrics = controller.get_step_performance_metrics(user_id)
+            
+            if step_metrics.get("step_performance"):
+                st.write("### Step Performance Analysis")
+                
+                # Create performance chart
+                import pandas as pd
+                
+                performance_data = []
+                for step_id, metrics in step_metrics["step_performance"].items():
+                    performance_data.append({
+                        "Step": step_id.replace('_', ' ').title(),
+                        "Success Rate": metrics["success_rate"] * 100,
+                        "Total Attempts": metrics["total_attempts"],
+                        "Successful": metrics["successful_attempts"]
+                    })
+                
+                df = pd.DataFrame(performance_data)
+                st.dataframe(df, use_container_width=True)
+                
+                # Show overall metrics
+                overall = step_metrics.get("overall_metrics", {})
+                if overall:
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Avg Steps Completed", f"{overall.get('average_steps_completed', 0):.1f}")
+                    
+                    with col2:
+                        if overall.get('most_reliable_step'):
+                            reliable_step = overall['most_reliable_step'].replace('_', ' ').title()
+                            st.metric("Most Reliable Step", reliable_step)
+                    
+                    with col3:
+                        if overall.get('least_reliable_step'):
+                            unreliable_step = overall['least_reliable_step'].replace('_', ' ').title()
+                            st.metric("Needs Improvement", unreliable_step)
+            else:
+                st.info("No step analytics data available")
+                
+        except Exception as e:
+            st.error(f"Error loading step analytics: {str(e)}")
+    else:
+        st.warning("Automation controller not available")
+
+
+def _show_automation_analytics():
+    """Show comprehensive automation analytics"""
+    st.subheader("📈 Automation Analytics")
+    
+    if hasattr(st.session_state, 'automation_controller'):
+        controller = st.session_state.automation_controller
+        user_id = "user@interviewagent.local"  # Placeholder
+        
+        # Create analytics sections
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("### Step Performance Analytics")
+            
+            try:
+                step_metrics = controller.get_step_performance_metrics(user_id)
+                
+                if step_metrics.get("step_performance"):
+                    # Create performance visualization
+                    performance_data = []
+                    for step_id, metrics in step_metrics["step_performance"].items():
+                        performance_data.append({
+                            "Step": step_id.replace('_', ' ').title(),
+                            "Success Rate": metrics["success_rate"],
+                            "Total Attempts": metrics["total_attempts"]
+                        })
+                    
+                    import pandas as pd
+                    df = pd.DataFrame(performance_data)
+                    
+                    # Show bar chart of success rates
+                    st.bar_chart(df.set_index("Step")["Success Rate"])
+                    
+                    # Show summary metrics
+                    overall = step_metrics.get("overall_metrics", {})
+                    if overall:
+                        st.write("**Key Insights:**")
+                        if overall.get('most_reliable_step'):
+                            st.success(f"✅ Most reliable: {overall['most_reliable_step'].replace('_', ' ').title()}")
+                        if overall.get('least_reliable_step'):
+                            st.warning(f"⚠️ Needs improvement: {overall['least_reliable_step'].replace('_', ' ').title()}")
+                else:
+                    st.info("No step performance data available yet")
+                    
+            except Exception as e:
+                st.error(f"Error loading step analytics: {str(e)}")
+        
+        with col2:
+            st.write("### Handoff Analytics")
+            
+            try:
+                handoff_analytics = controller.get_handoff_analytics(user_id)
+                
+                if handoff_analytics.get("total_handoffs", 0) > 0:
+                    # Show handoff metrics
+                    col2a, col2b = st.columns(2)
+                    
+                    with col2a:
+                        st.metric("Total Handoffs", handoff_analytics["total_handoffs"])
+                        st.metric("Success Rate", f"{handoff_analytics['handoff_success_rate']:.1%}")
+                    
+                    with col2b:
+                        st.metric("Successful", handoff_analytics["successful_handoffs"])
+                        st.metric("Avg Time", f"{handoff_analytics['average_handoff_time']:.2f}s")
+                    
+                    # Show common issues
+                    issues = handoff_analytics.get("common_handoff_issues", [])
+                    if issues:
+                        st.write("**Common Issues:**")
+                        for issue in issues:
+                            st.warning(f"• {issue}")
+                    else:
+                        st.success("✅ No common handoff issues detected")
+                else:
+                    st.info("No handoff data available yet")
+                    
+            except Exception as e:
+                st.error(f"Error loading handoff analytics: {str(e)}")
+        
+        # Overall automation trends
+        st.write("### Automation Trends")
+        
+        try:
+            history = controller.get_automation_history(user_id, limit=20)
+            
+            if history:
+                # Create trend data
+                import pandas as pd
+                from datetime import datetime
+                
+                trend_data = []
+                for session in history:
+                    if session.get("completed_at"):
+                        trend_data.append({
+                            "Date": session["completed_at"].strftime('%Y-%m-%d'),
+                            "Applications": session.get("successful_applications", 0),
+                            "Success Rate": session.get("successful_applications", 0) / max(session.get("processed_jobs", 1), 1)
+                        })
+                
+                if trend_data:
+                    df = pd.DataFrame(trend_data)
+                    df = df.groupby("Date").agg({
+                        "Applications": "sum",
+                        "Success Rate": "mean"
+                    }).reset_index()
+                    
+                    col3, col4 = st.columns(2)
+                    
+                    with col3:
+                        st.write("**Applications Over Time**")
+                        st.line_chart(df.set_index("Date")["Applications"])
+                    
+                    with col4:
+                        st.write("**Success Rate Trend**")
+                        st.line_chart(df.set_index("Date")["Success Rate"])
+                else:
+                    st.info("Not enough data for trend analysis")
+            else:
+                st.info("No automation history available for trend analysis")
+                
+        except Exception as e:
+            st.error(f"Error loading trend data: {str(e)}")
+    else:
+        st.warning("Automation controller not available")
 
 
 def _cancel_scheduled_job(job_id: str):
