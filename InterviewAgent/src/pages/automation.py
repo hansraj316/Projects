@@ -650,6 +650,26 @@ def _start_automation_workflow_new(job_search_criteria: Dict[str, Any], automati
                                 st.write(f"   Job: {detail['job_title']} at {detail.get('company', 'Unknown')}")
                             if detail.get("timestamp"):
                                 st.write(f"   Time: {detail['timestamp']}")
+                            
+                            # Show screenshot information for automation steps
+                            if step_name == "real_mcp_playwright_automation" or "playwright" in step_name.lower():
+                                if detail.get("screenshots_taken"):
+                                    st.write(f"   📸 Screenshots: {len(detail['screenshots_taken'])} saved")
+                                    if detail.get("screenshots_location") or detail.get("confirmation_data", {}).get("screenshots_location"):
+                                        location = detail.get("screenshots_location") or detail.get("confirmation_data", {}).get("screenshots_location")
+                                        st.write(f"   📁 Location: {location}")
+                                        st.code(f"ls {location}")
+                                    
+                                    # Show individual screenshot paths
+                                    with st.expander("📸 View Screenshot Paths"):
+                                        for screenshot in detail.get("screenshots_taken", []):
+                                            st.write(f"   📷 {screenshot}")
+                                
+                                if detail.get("browser_opened"):
+                                    st.write(f"   🌐 Browser: {'✅ Opened' if detail['browser_opened'] else '❌ Failed'}")
+                                if detail.get("navigation_successful"):
+                                    st.write(f"   🧭 Navigation: {'✅ Success' if detail['navigation_successful'] else '❌ Failed'}")
+                            
                             if not success and detail.get("error"):
                                 st.error(f"   Error: {detail['error']}")
                 

@@ -525,6 +525,19 @@ class JobDiscoveryAgent(BaseAgent):
             additional_skills = ["Git", "APIs", "Microservices", "Testing", "CI/CD", "Kubernetes", "GraphQL"]
             skills = base_skills + random.sample(additional_skills, k=random.randint(2, 4))
             
+            # Create realistic application URLs based on source
+            source = random.choice(["LinkedIn", "Indeed", "Company Website", "Glassdoor"])
+            company_slug = company.lower().replace(" ", "").replace(".", "")
+            
+            if source == "LinkedIn":
+                application_url = f"https://www.linkedin.com/jobs/view/{random.randint(3000000000, 4000000000)}/"
+            elif source == "Indeed":
+                application_url = f"https://www.indeed.com/viewjob?jk={random.randint(1000000000000000, 9999999999999999):016x}"
+            elif source == "Glassdoor":
+                application_url = f"https://www.glassdoor.com/job-listing/{title.lower().replace(' ', '-')}-{company_slug}-JV_IC{random.randint(1000000, 9999999)}.htm"
+            else:  # Company Website
+                application_url = f"https://careers.{company_slug}.com/jobs/{title.lower().replace(' ', '-')}-{random.randint(1000, 9999)}"
+            
             job = {
                 "title": title,
                 "company": company,
@@ -532,10 +545,12 @@ class JobDiscoveryAgent(BaseAgent):
                 "summary": f"Join {company} as a {title}. Work on cutting-edge projects and make a significant impact. We're looking for talented individuals to join our growing team.",
                 "skills": skills,
                 "experience_level": experience_level,
-                "source": random.choice(["LinkedIn", "Indeed", "Company Website", "Glassdoor"]),
+                "source": source,
                 "salary_range": f"${salary_min}k-${salary_max}k",
                 "posted_date": f"{random.randint(1, 7)} days ago",
-                "job_id": f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{i}"
+                "job_id": f"job_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{i}",
+                "application_url": application_url,
+                "apply_link": application_url  # Additional field for clarity
             }
             jobs.append(job)
         
