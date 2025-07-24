@@ -1,0 +1,23 @@
+$schema: "https://raw.githubusercontent.com/lastmile-ai/mcp-agent/main/schema/mcp-agent.config.schema.json"
+
+mcp:
+  servers:
+    # Microsoft Playwright MCP Server for browser automation
+    playwright:
+      command: "npx"
+      args: ["-y", "@microsoft/playwright-mcp-server"]
+    
+    # Alternative: Use the standard MCP Playwright server if Microsoft version not available
+    playwright-alt:
+      command: "npx" 
+      args: ["-y", "@modelcontextprotocol/server-playwright"]
+    
+    # Filesystem server for file operations (resume/cover letter uploads)
+    filesystem:
+      command: "npx"
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    
+    # Optional: Fetch server for web scraping job data
+    fetch:
+      command: "uvx"
+      args: ["mcp-server-fetch"]

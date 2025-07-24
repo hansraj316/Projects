@@ -286,40 +286,66 @@ Best regards,
         }
         
         try:
-            # Import real MCP implementation that actually uses MCP tools
-            from automation.real_mcp_implementation import execute_real_mcp_automation
+            # Try Claude Code MCP Playwright integration first (optimized for Claude Code environment)
+            from agents.claude_mcp_automation_agent import execute_claude_mcp_job_automation
             
-            # Execute real MCP automation using actual MCP tools
-            automation_result = await execute_real_mcp_automation(
+            self.logger.info("Using Claude Code MCP Playwright integration")
+            
+            # Execute automation using Claude Code MCP tools
+            automation_result = await execute_claude_mcp_job_automation(
                 job_data=job_data,
                 user_profile=user_profile,
                 resume_data=resume_data,
-                cover_letter_data=cover_letter_data
+                cover_letter_data=cover_letter_data,
+                automation_settings={
+                    "screenshot_dir": "data/screenshots",
+                    "browser_width": 1280,
+                    "browser_height": 720
+                }
             )
             
             return automation_result
             
-        except ImportError:
-            # Try the final MCP executor as fallback
+        except ImportError as e:
+            self.logger.warning(f"Claude MCP automation not available: {str(e)}")
+            # Fallback to OpenAI Agents SDK with MCP
             try:
-                from automation.mcp_playwright_executor import execute_real_mcp_playwright_automation_final
+                from agents.openai_mcp_automation_agent import execute_openai_mcp_job_automation
                 
-                self.logger.info("Using real MCP Playwright executor with actual MCP tools")
+                self.logger.info("Using OpenAI Agents SDK with MCP Playwright integration")
                 
-                # Execute final MCP automation with actual tools
-                automation_result = await execute_real_mcp_playwright_automation_final(
+                # Execute automation using OpenAI Agent with real MCP tools
+                automation_result = await execute_openai_mcp_job_automation(
                     job_data=job_data,
                     user_profile=user_profile,
                     resume_data=resume_data,
-                    cover_letter_data=cover_letter_data
+                    cover_letter_data=cover_letter_data,
+                    automation_settings={
+                        "screenshot_dir": "data/screenshots"
+                    }
                 )
                 
                 return automation_result
                 
-            except ImportError as e:
-                self.logger.warning(f"MCP Playwright integration not available: {str(e)}")
-                # Final fallback to simulated automation
-                return self._simulate_playwright_automation(job_data, resume_result, cover_letter_result)
+            except ImportError as e2:
+                self.logger.warning(f"OpenAI Agents SDK not available: {str(e2)}")
+                # Fallback to real MCP implementation
+                try:
+                    from automation.real_mcp_implementation import execute_real_mcp_job_automation
+                    
+                    self.logger.info("Using fallback real MCP implementation")
+                    
+                    # Execute real MCP automation using actual MCP tools
+                    automation_result = await execute_real_mcp_job_automation(
+                        job_data, user_profile, resume_data, cover_letter_data
+                    )
+                    
+                    return automation_result
+                    
+                except ImportError as e3:
+                    self.logger.warning(f"Real MCP implementation not available: {str(e3)}")
+                    # Final fallback to simulated automation
+                    return self._simulate_playwright_automation(job_data, resume_result, cover_letter_result)
         except Exception as e:
             self.logger.error(f"MCP Playwright automation failed: {str(e)}")
             self.logger.error(f"Error type: {type(e).__name__}")

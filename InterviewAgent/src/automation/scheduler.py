@@ -15,7 +15,7 @@ from apscheduler.triggers.date import DateTrigger
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.executors.asyncio import AsyncIOExecutor
 
-from agents.automation_controller import AutomationController
+from agents.simple_automation_controller import SimpleAutomationController
 from agents.job_discovery import JobDiscoveryAgent
 from config import get_config
 from database.operations import get_db_operations
@@ -29,7 +29,7 @@ class AutomationScheduler:
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or get_config()
         self.db_ops = get_db_operations()
-        self.automation_controller = AutomationController(config)
+        self.automation_controller = SimpleAutomationController(config)
         self.job_discovery_agent = JobDiscoveryAgent(config)
         
         # Setup APScheduler

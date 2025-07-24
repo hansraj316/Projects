@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import pandas as pd
 
-from agents.automation_controller import AutomationController
+from agents.simple_automation_controller import SimpleAutomationController
 from automation.scheduler import AutomationScheduler
 from database.operations import get_db_operations
 from config import get_config
-from agents.openai_automation_agent import monitor_automation_progress
+# Monitor automation progress function moved to simple_automation_controller
 
 
 def show_automation():
@@ -26,7 +26,7 @@ def show_automation():
     # Initialize automation components
     if 'automation_controller' not in st.session_state:
         config = get_config()
-        st.session_state.automation_controller = AutomationController(config.__dict__)
+        st.session_state.automation_controller = SimpleAutomationController(config.__dict__)
         st.session_state.automation_scheduler = AutomationScheduler(config.__dict__)
         
         # Start scheduler in background

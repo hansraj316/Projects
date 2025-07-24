@@ -1,0 +1,12 @@
+Screenshot Placeholder - 20250723_235947
+Description: Initial page view
+URL: https://careers.microsoft.com/professionals/us/en/job/123456
+Timestamp: 2025-07-23T23:59:47.342463
+Expected File: initial_page_20250723_235947.png
+Status: Placeholder created
+
+This file confirms that a screenshot was requested and the directory is writable.
+In actual Claude Code execution, this would be a real PNG screenshot taken by MCP tools.
+
+MCP Tool Used: mcp__playwright__browser_take_screenshot
+Target Path: /Users/hansraj/Preparation/Projects/InterviewAgent/src/data/test_screenshots/initial_page_20250723_235947.png

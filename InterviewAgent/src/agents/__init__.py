@@ -12,13 +12,13 @@ try:
     from .cover_letter_generator import CoverLetterAgent
     from .job_discovery import JobDiscoveryAgent
     
-    # Try to import orchestrator and agent_manager if they exist
+    # Try to import enhanced orchestrator and agent_manager if they exist
     try:
-        from .orchestrator import OrchestratorAgent
+        from .enhanced_orchestrator import EnhancedOrchestratorAgent
         from .agent_manager import AgentManager
         orchestrator_available = True
     except ImportError:
-        OrchestratorAgent = None
+        EnhancedOrchestratorAgent = None
         AgentManager = None
         orchestrator_available = False
     
@@ -32,7 +32,7 @@ try:
     ]
     
     if orchestrator_available:
-        __all__.extend(['OrchestratorAgent', 'AgentManager'])
+        __all__.extend(['EnhancedOrchestratorAgent', 'AgentManager'])
         
 except ImportError as e:
     print(f"Warning: Could not import some agent modules: {e}")
@@ -43,5 +43,5 @@ except ImportError as e:
     ResumeOptimizerAgent = None
     CoverLetterAgent = None
     JobDiscoveryAgent = None
-    OrchestratorAgent = None
+    EnhancedOrchestratorAgent = None
     AgentManager = None
