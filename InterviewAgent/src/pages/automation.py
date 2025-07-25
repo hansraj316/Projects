@@ -600,80 +600,77 @@ def _start_automation_workflow_new(job_search_criteria: Dict[str, Any], automati
             # This would normally be async, but for demo purposes we'll simulate
             import asyncio
             result = asyncio.run(
-                controller.start_job_application_automation(
+                controller.execute_job_automation_workflow(
                     user_id=user_id,
                     job_search_criteria=job_search_criteria,
-                    automation_settings=automation_settings,
+                    automation_config=automation_settings,
                     saved_jobs=saved_jobs
                 )
             )
             
-            if result["success"]:
-                st.success("🎉 OpenAI Agents SDK automation workflow completed!")
+            if result.success:
+                st.success("🎉 Automation workflow completed successfully!")
                 
-                # Store session for monitoring
-                st.session_state.current_automation_session = result["session_id"]
-                st.session_state.current_workflow_id = result["workflow_id"]
+                # Store workflow for monitoring
+                st.session_state.current_workflow_id = result.workflow_id
                 
-                # Show summary
-                summary = result["automation_summary"]
-                
+                # Show summary metrics
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    st.metric("Jobs Found", summary["total_jobs_found"])
+                    st.metric("Jobs Found", result.total_jobs_found)
                 
                 with col2:
-                    st.metric("Applications Created", summary["applications_created"])
+                    st.metric("Applications Created", result.applications_created)
                 
                 with col3:
-                    st.metric("Applications Submitted", summary["applications_submitted"])
+                    st.metric("Applications Submitted", result.applications_submitted)
                 
                 with col4:
-                    st.metric("Success Rate", f"{summary['success_rate']:.1f}%")
+                    success_rate = (result.applications_submitted / result.total_jobs_found * 100) if result.total_jobs_found > 0 else 0
+                    st.metric("Success Rate", f"{success_rate:.1f}%")
                 
-                # Show workflow steps executed
-                st.write("### Workflow Steps Executed")
-                for i, step in enumerate(summary["workflow_steps"], 1):
-                    st.write(f"{i}. ✅ {step}")
+                # Show execution summary
+                st.write("### Execution Summary")
+                summary = result.execution_summary
+                st.write(f"⏱️ **Execution Time**: {summary.get('execution_time', 'N/A')} seconds")
+                st.write(f"🆔 **Workflow ID**: {summary.get('workflow_id', 'N/A')}")
+                st.write(f"📅 **Started**: {summary.get('timestamp', 'N/A')}")
                 
-                # Show detailed results if available
-                if result.get("detailed_results"):
-                    with st.expander("Detailed Step Results"):
-                        for detail in result["detailed_results"]:
-                            step_name = detail.get("step", "Unknown Step")
-                            success = detail.get("success", False)
-                            status_icon = "✅" if success else "❌"
+                # Show detailed results
+                if result.detailed_results:
+                    st.write("### Detailed Results")
+                    for i, step_result in enumerate(result.detailed_results, 1):
+                        step_name = step_result.get("step", f"Step {i}")
+                        step_success = step_result.get("success", False)
+                        status_icon = "✅" if step_success else "❌"
+                        st.write(f"{i}. {status_icon} **{step_name}**")
+                        
+                        # Show additional details based on step type
+                        if step_name == "job_search":
+                            st.write(f"   📊 Found {step_result.get('total_found', 0)} jobs")
+                        elif step_name == "resume_optimization":
+                            st.write(f"   🎯 ATS Score: {step_result.get('ats_score', 'N/A')}")
+                        elif step_name == "cover_letter_generation":
+                            st.write(f"   💌 Personalization Score: {step_result.get('personalization_score', 'N/A')}")
+                        elif step_name == "playwright_automation":
+                            st.write(f"   🌐 Automation ID: {step_result.get('automation_id', 'N/A')}")
+                            st.write(f"   ⏱️ Execution Time: {step_result.get('execution_time', 'N/A')}")
                             
-                            st.write(f"**{status_icon} {step_name}**")
-                            if detail.get("job_title"):
-                                st.write(f"   Job: {detail['job_title']} at {detail.get('company', 'Unknown')}")
-                            if detail.get("timestamp"):
-                                st.write(f"   Time: {detail['timestamp']}")
+                            # Show steps executed
+                            steps_executed = step_result.get("steps_executed", [])
+                            if steps_executed:
+                                st.write("   📝 **Automation Steps:**")
+                                for step in steps_executed:
+                                    st.write(f"      • {step}")
                             
-                            # Show screenshot information for automation steps
-                            if step_name == "real_mcp_playwright_automation" or "playwright" in step_name.lower():
-                                if detail.get("screenshots_taken"):
-                                    st.write(f"   📸 Screenshots: {len(detail['screenshots_taken'])} saved")
-                                    if detail.get("screenshots_location") or detail.get("confirmation_data", {}).get("screenshots_location"):
-                                        location = detail.get("screenshots_location") or detail.get("confirmation_data", {}).get("screenshots_location")
-                                        st.write(f"   📁 Location: {location}")
-                                        st.code(f"ls {location}")
-                                    
-                                    # Show individual screenshot paths
-                                    with st.expander("📸 View Screenshot Paths"):
-                                        for screenshot in detail.get("screenshots_taken", []):
-                                            st.write(f"   📷 {screenshot}")
-                                
-                                if detail.get("browser_opened"):
-                                    st.write(f"   🌐 Browser: {'✅ Opened' if detail['browser_opened'] else '❌ Failed'}")
-                                if detail.get("navigation_successful"):
-                                    st.write(f"   🧭 Navigation: {'✅ Success' if detail['navigation_successful'] else '❌ Failed'}")
-                            
-                            if not success and detail.get("error"):
-                                st.error(f"   Error: {detail['error']}")
-                
-                st.info(f"📧 Email notifications sent for application confirmations")
+                            # Show screenshots if available
+                            screenshots = step_result.get("screenshots_taken", [])
+                            if screenshots:
+                                st.write(f"   📸 **Screenshots**: {len(screenshots)} captured")
+                                with st.expander("View screenshot paths"):
+                                    for screenshot in screenshots:
+                                        st.code(screenshot)
                 
                 # Show next steps
                 st.write("### Next Steps")
@@ -682,7 +679,18 @@ def _start_automation_workflow_new(job_search_criteria: Dict[str, Any], automati
                 st.write("3. 📈 Check analytics for performance insights")
                 
             else:
-                st.error(f"❌ Automation failed: {result.get('error', 'Unknown error')}")
+                st.error("❌ Automation workflow failed")
+                if result.execution_summary.get('error'):
+                    st.error(f"Error: {result.execution_summary['error']}")
+                
+                # Show any partial results
+                if result.detailed_results:
+                    st.write("### Partial Results")
+                    for i, step_result in enumerate(result.detailed_results, 1):
+                        step_name = step_result.get("step", f"Step {i}")
+                        step_success = step_result.get("success", False)
+                        status_icon = "✅" if step_success else "❌"
+                        st.write(f"{i}. {status_icon} **{step_name}**")
     
     except Exception as e:
         st.error(f"Failed to start automation: {str(e)}")

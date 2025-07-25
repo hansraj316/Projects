@@ -368,10 +368,11 @@ class AutomationScheduler:
                 return
             
             # Start enhanced automation process
-            automation_result = await self.automation_controller.start_job_application_automation(
+            automation_result = await self.automation_controller.execute_job_automation_workflow(
                 user_id=user_id,
-                job_search_results=job_search_results,
-                automation_settings=automation_config
+                job_search_criteria=job_search_criteria,
+                automation_config=automation_config,
+                saved_jobs=job_search_results.get("jobs", [])
             )
             
             # Record execution history
