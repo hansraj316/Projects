@@ -15,6 +15,7 @@ from .models import (
     dict_to_model, model_to_dict,
     ApplicationStatus, JobStatus, AgentStatus
 )
+import supabase  # Add this if not already present
 
 logger = logging.getLogger(__name__)
 
@@ -61,8 +62,11 @@ class DatabaseOperations:
             result = self.client.table('users').insert(user_data).execute()
             return dict_to_model(result.data[0], User)
             
+        except supabase.PostgrestAPIError as e:
+            logger.error(f"Supabase API error in get_or_create_user: {str(e)}")
+            raise
         except Exception as e:
-            logger.error(f"Failed to get/create user: {str(e)}")
+            logger.error(f"Unexpected error in get_or_create_user: {str(e)}")
             raise
     
     # Resume operations

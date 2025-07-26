@@ -672,11 +672,39 @@ def _start_automation_workflow_new(job_search_criteria: Dict[str, Any], automati
                                     for screenshot in screenshots:
                                         st.code(screenshot)
                 
+                # Show iframe browser if available
+                iframe_url = result.detailed_results[-1].get("iframe_url") if result.detailed_results else None
+                if iframe_url:
+                    st.write("### 🌐 Real-Time Browser Automation")
+                    st.info("👀 **You can see the automation happening live in the browser below!**")
+                    
+                    # Create iframe container
+                    iframe_html = f"""
+                    <div style="border: 2px solid #4CAF50; border-radius: 8px; overflow: hidden; margin: 10px 0;">
+                        <div style="background: #4CAF50; color: white; padding: 8px; font-weight: bold;">
+                            🤖 MCP Playwright Automation - Live Browser Control
+                        </div>
+                        <iframe 
+                            src="{iframe_url}" 
+                            width="100%" 
+                            height="600" 
+                            frameborder="0"
+                            style="display: block; margin: 0; padding: 0;"
+                        ></iframe>
+                    </div>
+                    """
+                    st.components.v1.html(iframe_html, height=650)
+                    
+                    st.success("✅ **Iframe automation active!** The browser above is being controlled by MCP Playwright tools.")
+                    st.info("📝 **Manual Review**: You can interact with the form above to complete any steps that need manual input.")
+                
                 # Show next steps
                 st.write("### Next Steps")
                 st.write("1. ✅ Monitor progress in the 'Monitor Progress' tab")
                 st.write("2. 📊 Review applications in the Applications tab")
                 st.write("3. 📈 Check analytics for performance insights")
+                if iframe_url:
+                    st.write("4. 🌐 Complete any manual steps in the browser above if needed")
                 
             else:
                 st.error("❌ Automation workflow failed")
