@@ -6,7 +6,7 @@ import logging
 from typing import Dict, Any, Optional
 
 from .base_agent import BaseAgent
-from .orchestrator import OrchestratorAgent
+from .enhanced_orchestrator import EnhancedOrchestratorAgent
 from .resume_optimizer import ResumeOptimizerAgent
 from .cover_letter_generator import CoverLetterAgent
 
@@ -27,7 +27,7 @@ class AgentManager:
         self.logger.info("Initializing AI agents...")
         
         # Create orchestrator
-        self.orchestrator = OrchestratorAgent(self.config)
+        self.orchestrator = EnhancedOrchestratorAgent(self.config)
         self.agents["orchestrator"] = self.orchestrator
         
         # Create specialized agents
@@ -56,7 +56,7 @@ class AgentManager:
         """
         return self.agents.get(agent_name)
     
-    def get_orchestrator(self) -> OrchestratorAgent:
+    def get_orchestrator(self) -> EnhancedOrchestratorAgent:
         """Get the orchestrator agent"""
         return self.orchestrator
     

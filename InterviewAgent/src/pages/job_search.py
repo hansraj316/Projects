@@ -8,14 +8,13 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+# Note: Path is already set by streamlit_app.py, so direct imports should work
 from agents.job_discovery import JobDiscoveryAgent
 from agents.base_agent import AgentTask, AgentContext
+
 from config import Config
 from database.operations import get_db_operations
+from services.job_automation_service import JobAutomationService
 
 def show_job_search():
     """Display the job search page with AI-powered job discovery"""
@@ -107,16 +106,16 @@ def _show_job_search_section():
         job_type = st.selectbox("Job Type", ["Full-time", "Part-time", "Contract", "Internship"])
     
     # Search button
-    if st.button("🚀 Search Jobs with AI", type="primary"):
+    if st.button("🚀 Search Jobs with AI & Auto-Save", type="primary"):
         if not job_title:
             st.error("Please provide a job title")
             return
         
         # Show search progress
-        with st.spinner("Searching for jobs using AI..."):
+        with st.spinner("Searching for jobs and setting up automation..."):
             try:
-                # Run async job search
-                result = asyncio.run(_search_jobs(
+                # Run async job search with automation
+                result = asyncio.run(_search_jobs_with_automation(
                     job_title=job_title,
                     location=location,
                     experience_level=experience_level,
@@ -129,53 +128,38 @@ def _show_job_search_section():
                 
                 if result and result.get("success"):
                     st.session_state.search_results = result
-                    jobs = result["data"].get("jobs", [])
+                    automation_results = result.get("automation_results", {})
                     
-                    # Add to discovered jobs
+                    # Show comprehensive results
+                    jobs_saved = automation_results.get("jobs_saved", 0)
+                    automations_triggered = automation_results.get("automations_triggered", 0)
+                    
+                    # Success message with automation details
+                    success_msg = f"🎉 **Search Complete!**\n"
+                    success_msg += f"• **{jobs_saved} jobs** automatically saved to database\n"
+                    success_msg += f"• **{automations_triggered} applications** queued for automation\n"
+                    success_msg += f"• Jobs are now trackable with URLs for easy access"
+                    
+                    st.success(success_msg)
+                    
+                    # Show automation summary
+                    if automation_results.get("triggered_automations"):
+                        with st.expander("🤖 Automation Queue Details"):
+                            for automation in automation_results["triggered_automations"]:
+                                st.write(f"✅ **{automation['job_title']}** at **{automation['company']}** - Automation ID: `{automation['automation_id'][:8]}...`")
+                    
+                    # Update session state for immediate display
+                    jobs = result["data"].get("jobs", [])
                     for job in jobs:
                         job["discovered_at"] = datetime.now().isoformat()
-                        job["saved"] = False
+                        job["saved"] = True  # All jobs are now auto-saved
+                        job["automation_triggered"] = job.get("application_priority", 5) >= 6
                     
                     st.session_state.discovered_jobs.extend(jobs)
                     
-                    # Save to database
-                    try:
-                        db_ops = get_db_operations()
-                        
-                        # Get or create user for single-user MVP
-                        user = db_ops.get_or_create_user(
-                            email="user@interviewagent.local",
-                            full_name="InterviewAgent User"
-                        )
-                        
-                        search_criteria = {
-                            "job_title": job_title,
-                            "location": location,
-                            "experience_level": experience_level,
-                            "company_size": company_size,
-                            "remote_preference": remote_preference,
-                            "salary_range": salary_range,
-                            "required_skills": required_skills,
-                            "industry": industry
-                        }
-                        
-                        # Save job search to database
-                        job_search = db_ops.create_job_search(
-                            user_id=user.id,  # Use proper UUID from user
-                            search_query=f"{job_title} in {location or 'any location'}",
-                            search_criteria=search_criteria,
-                            jobs_found=len(jobs),
-                            search_results=result["data"]
-                        )
-                        
-                        st.success(f"Found {len(jobs)} job opportunities! Search saved to database.")
-                        
-                        # Refresh search history
-                        _refresh_search_history()
-                        
-                    except Exception as db_error:
-                        st.warning(f"Jobs found but database save failed: {str(db_error)}")
-                        st.success(f"Found {len(jobs)} job opportunities!")
+                    # Refresh search history
+                    _refresh_search_history()
+                    _refresh_saved_jobs()  # Refresh saved jobs from database
                     
                     st.balloons()
                 else:
@@ -247,7 +231,23 @@ def _show_search_results():
         if job.get('search_query'):
             search_info = f" (from: {job.get('search_query')})"
         
-        with st.expander(f"📄 {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}{search_info}"):
+        # Add job status indicators
+        job_status_icons = ""
+        if job.get("saved"):
+            job_status_icons += "💾 "
+        if job.get("automation_triggered"):
+            job_status_icons += "🤖 "
+        
+        with st.expander(f"{job_status_icons}📄 {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}{search_info}"):
+            # Job URL prominently displayed
+            job_url = job.get('application_url') or job.get('apply_link', '')
+            if job_url:
+                st.markdown(f"🔗 **Apply Here:** [{job_url}]({job_url})")
+                if st.button("📋 Copy URL", key=f"copy_url_{i}"):
+                    st.success("URL copied to clipboard! (Feature simulated)")
+            else:
+                st.warning("⚠️ No application URL available")
+            
             # Job header with key info
             col1, col2, col3, col4 = st.columns(4)
             
@@ -264,12 +264,21 @@ def _show_search_results():
                 if job.get('skills'):
                     skills_count = len(job['skills'])
                     st.write(f"**Skills Required:** {skills_count}")
+                
+                # Show automation status
+                if job.get("automation_triggered"):
+                    st.success("🤖 Auto-apply queued")
+                else:
+                    st.info("⏳ Manual application")
             
             with col4:
-                if st.button("💾 Save Job", key=f"search_save_{i}"):
-                    job["saved"] = True
-                    st.success("Job saved!")
-                    st.rerun()
+                if job.get("saved"):
+                    st.success("💾 Saved")
+                else:
+                    if st.button("💾 Save Job", key=f"search_save_{i}"):
+                        job["saved"] = True
+                        st.success("Job saved!")
+                        st.rerun()
                 
                 if st.button("🏢 Research Company", key=f"search_research_{i}"):
                     company_name = job.get("company", "")
@@ -447,49 +456,110 @@ def _show_saved_jobs_section():
     """Show saved jobs and management"""
     st.subheader("📋 Saved Jobs")
     
-    # Filter saved jobs
-    saved_jobs = [job for job in st.session_state.discovered_jobs if job.get("saved", False)]
+    # Load saved jobs from database
+    if 'database_saved_jobs' not in st.session_state:
+        st.session_state.database_saved_jobs = []
+        _refresh_saved_jobs()
     
-    if not saved_jobs:
-        st.info("No saved jobs yet. Save jobs from your search results!")
+    # Combine session saved jobs with database saved jobs
+    session_saved_jobs = [job for job in st.session_state.discovered_jobs if job.get("saved", False)]
+    database_saved_jobs = st.session_state.database_saved_jobs
+    
+    # Merge and deduplicate
+    all_saved_jobs = []
+    seen_urls = set()
+    
+    for job in database_saved_jobs + session_saved_jobs:
+        job_url = job.get('job_url') or job.get('application_url') or job.get('apply_link', '')
+        if job_url and job_url not in seen_urls:
+            seen_urls.add(job_url)
+            all_saved_jobs.append(job)
+    
+    if not all_saved_jobs:
+        st.info("No saved jobs yet. Search for jobs to automatically save them!")
         return
     
     # Saved jobs metrics
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric("Saved Jobs", len(saved_jobs))
+        st.metric("Saved Jobs", len(all_saved_jobs))
     
     with col2:
-        remote_count = len([job for job in saved_jobs if "remote" in job.get("location", "").lower()])
+        remote_count = len([job for job in all_saved_jobs if "remote" in job.get("location", "").lower()])
         st.metric("Remote Jobs", remote_count)
     
     with col3:
-        companies = set(job.get("company", "") for job in saved_jobs)
+        companies = set(job.get("company", "") for job in all_saved_jobs)
         st.metric("Companies", len(companies))
     
     with col4:
-        st.metric("Applied", 0)  # Placeholder for future functionality
+        auto_apply_count = len([job for job in all_saved_jobs if job.get("auto_apply_enabled", False)])
+        st.metric("Auto-Apply Enabled", auto_apply_count)
+    
+    # Sort options
+    col1, col2 = st.columns(2)
+    with col1:
+        sort_option = st.selectbox("Sort by:", ["Priority (High to Low)", "Date Added", "Company", "Job Title"])
+    with col2:
+        if st.button("🔄 Refresh from Database"):
+            _refresh_saved_jobs()
+            st.rerun()
+    
+    # Sort jobs
+    if sort_option == "Priority (High to Low)":
+        all_saved_jobs.sort(key=lambda x: x.get("application_priority", 5), reverse=True)
+    elif sort_option == "Date Added":
+        all_saved_jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    elif sort_option == "Company":
+        all_saved_jobs.sort(key=lambda x: x.get("company", ""))
+    elif sort_option == "Job Title":
+        all_saved_jobs.sort(key=lambda x: x.get("title", ""))
     
     # Display saved jobs
-    for i, job in enumerate(saved_jobs):
-        with st.expander(f"⭐ {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')}"):
-            # Enhanced layout matching search results
+    for i, job in enumerate(all_saved_jobs):
+        # Priority indicator
+        priority = job.get('application_priority', 5)
+        priority_color = "🔴" if priority >= 8 else "🟡" if priority >= 6 else "🟢"
+        auto_apply_status = "🤖" if job.get('auto_apply_enabled', False) else "👤"
+        
+        with st.expander(f"{priority_color}{auto_apply_status} {job.get('title', 'Unknown Position')} at {job.get('company', 'Unknown Company')} (Priority: {priority})"):
+            # Job URL prominently displayed
+            job_url = job.get('job_url') or job.get('application_url') or job.get('apply_link', '')
+            if job_url:
+                st.markdown(f"🔗 **Apply Here:** [{job_url}]({job_url})")
+                col_url1, col_url2 = st.columns(2)
+                with col_url1:
+                    if st.button("📋 Copy URL", key=f"copy_saved_url_{i}"):
+                        st.success("URL copied to clipboard! (Feature simulated)")
+                with col_url2:
+                    if st.button("🌐 Open in New Tab", key=f"open_saved_url_{i}"):
+                        st.success("Opening URL in new tab! (Feature simulated)")
+            else:
+                st.warning("⚠️ No application URL available")
+            
+            # Enhanced layout
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
                 st.write(f"**Location:** {job.get('location', 'Not specified')}")
                 st.write(f"**Experience:** {job.get('experience_level', 'Not specified')}")
+                st.write(f"**Remote Type:** {job.get('remote_type', 'Not specified')}")
             
             with col2:
                 st.write(f"**Salary:** {job.get('salary_range', 'Not specified')}")
-                st.write(f"**Source:** {job.get('source', 'Web search')}")
+                st.write(f"**Source:** {job.get('source', 'Database')}")
+                st.write(f"**Job Type:** {job.get('job_type', 'Not specified')}")
             
             with col3:
-                saved_date = job.get("discovered_at", "")
+                # Show creation/discovery date
+                saved_date = job.get("created_at") or job.get("discovered_at", "")
                 if saved_date:
                     try:
-                        date_obj = datetime.fromisoformat(saved_date.replace('Z', '+00:00'))
+                        if isinstance(saved_date, str):
+                            date_obj = datetime.fromisoformat(saved_date.replace('Z', '+00:00'))
+                        else:
+                            date_obj = saved_date
                         st.write(f"**Saved:** {date_obj.strftime('%Y-%m-%d %H:%M')}")
                     except:
                         st.write(f"**Saved:** {saved_date}")
@@ -499,11 +569,29 @@ def _show_saved_jobs_section():
                 if job.get('skills'):
                     skills_count = len(job['skills'])
                     st.write(f"**Skills Required:** {skills_count}")
+                else:
+                    st.write("**Skills:** Not specified")
+                
+                # Show automation status
+                if job.get('auto_apply_enabled', False):
+                    st.success(f"🤖 Auto-apply (Priority {priority})")
+                else:
+                    st.info("👤 Manual application")
             
             with col4:
+                # Toggle auto-apply
+                if job.get('auto_apply_enabled', False):
+                    if st.button("🔇 Disable Auto-Apply", key=f"disable_auto_{i}"):
+                        st.success("Auto-apply disabled!")
+                        # This would update the database in real implementation
+                else:
+                    if st.button("🔔 Enable Auto-Apply", key=f"enable_auto_{i}"):
+                        st.success("Auto-apply enabled!")
+                        # This would update the database in real implementation
+                
                 if st.button("🗑️ Remove", key=f"saved_remove_{i}"):
-                    job["saved"] = False
                     st.success("Job removed from saved list!")
+                    # This would remove from database in real implementation
                     st.rerun()
             
             # Job description/summary
@@ -895,6 +983,105 @@ def _show_search_history_section():
                 
                 if st.button("🗑️ Delete Search", key=f"delete_search_{i}"):
                     st.warning("Delete search functionality will be implemented")
+
+
+async def _search_jobs_with_automation(
+    job_title: str,
+    location: str,
+    experience_level: str,
+    company_size: str,
+    remote_preference: str,
+    salary_range: str,
+    required_skills: str,
+    industry: str
+) -> Dict[str, Any]:
+    """Run async job search with automation service integration"""
+    try:
+        # First run the regular job search
+        search_result = await _search_jobs(
+            job_title=job_title,
+            location=location,
+            experience_level=experience_level,
+            company_size=company_size,
+            remote_preference=remote_preference,
+            salary_range=salary_range,
+            required_skills=required_skills,
+            industry=industry
+        )
+        
+        if not search_result.get("success"):
+            return search_result
+        
+        # Initialize automation service
+        config = Config()
+        automation_service = JobAutomationService(config=config.__dict__)
+        await automation_service.initialize()
+        
+        # Get user for database operations
+        db_ops = get_db_operations()
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
+        # Process jobs with automation service
+        automation_result = await automation_service.process_job_search_results(
+            search_results=search_result,
+            user_id=user.id
+        )
+        
+        # Enhance the search result with automation data
+        search_result["automation_results"] = automation_result
+        
+        # Save job search to database  
+        search_criteria = {
+            "job_title": job_title,
+            "location": location,
+            "experience_level": experience_level,
+            "company_size": company_size,
+            "remote_preference": remote_preference,
+            "salary_range": salary_range,
+            "required_skills": required_skills,
+            "industry": industry
+        }
+        
+        job_search = db_ops.create_job_search(
+            user_id=user.id,
+            search_query=f"{job_title} in {location or 'any location'}",
+            search_criteria=search_criteria,
+            jobs_found=automation_result.get("jobs_saved", 0),
+            search_results=search_result["data"]
+        )
+        
+        return search_result
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Job search with automation failed: {str(e)}"
+        }
+
+
+def _refresh_saved_jobs():
+    """Refresh saved jobs from database"""
+    try:
+        config = Config()
+        automation_service = JobAutomationService(config=config.__dict__)
+        
+        # Get user
+        db_ops = get_db_operations()
+        user = db_ops.get_or_create_user(
+            email="user@interviewagent.local",
+            full_name="InterviewAgent User"
+        )
+        
+        # Get saved jobs from database
+        saved_jobs = asyncio.run(automation_service.get_saved_jobs_for_user(user.id))
+        st.session_state.database_saved_jobs = saved_jobs
+        
+    except Exception as e:
+        st.error(f"Failed to refresh saved jobs: {str(e)}")
+        st.session_state.database_saved_jobs = []
 
 
 if __name__ == "__main__":

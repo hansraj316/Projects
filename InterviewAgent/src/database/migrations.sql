@@ -44,17 +44,44 @@ CREATE TABLE IF NOT EXISTS public.job_sites (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+-- Companies table for career page tracking
+CREATE TABLE IF NOT EXISTS public.companies (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name TEXT NOT NULL,
+  domain TEXT NOT NULL UNIQUE,
+  career_page_url TEXT NOT NULL,
+  industry TEXT,
+  company_size TEXT,
+  headquarters TEXT,
+  description TEXT,
+  website_url TEXT,
+  linkedin_url TEXT,
+  is_active BOOLEAN DEFAULT TRUE,
+  last_scraped TIMESTAMP WITH TIME ZONE,
+  jobs_found_count INTEGER DEFAULT 0,
+  scraping_difficulty TEXT CHECK (scraping_difficulty IN ('easy', 'medium', 'hard')),
+  scraping_notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
 -- Job listings table
 CREATE TABLE IF NOT EXISTS public.job_listings (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   job_site_id UUID REFERENCES public.job_sites(id) ON DELETE CASCADE NOT NULL,
   title TEXT NOT NULL,
   company TEXT NOT NULL,
+  job_url TEXT NOT NULL,
   location TEXT,
   description TEXT NOT NULL DEFAULT '',
   requirements TEXT,
   salary_range TEXT,
-  job_url TEXT NOT NULL,
+  company_id UUID REFERENCES public.companies(id) ON DELETE SET NULL,
+  remote_type TEXT CHECK (remote_type IN ('remote', 'hybrid', 'onsite')),
+  experience_level TEXT CHECK (experience_level IN ('entry', 'mid', 'senior')),
+  job_type TEXT CHECK (job_type IN ('full-time', 'part-time', 'contract')),
+  auto_apply_enabled BOOLEAN DEFAULT TRUE,
+  application_priority INTEGER DEFAULT 5 CHECK (application_priority >= 1 AND application_priority <= 10),
   scraped_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   applied_at TIMESTAMP WITH TIME ZONE,
   status job_status DEFAULT 'discovered',
@@ -110,8 +137,14 @@ CREATE TABLE IF NOT EXISTS public.agent_logs (
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_resume_templates_user_id ON public.resume_templates(user_id);
 CREATE INDEX IF NOT EXISTS idx_job_sites_user_id ON public.job_sites(user_id);
+CREATE INDEX IF NOT EXISTS idx_companies_domain ON public.companies(domain);
+CREATE INDEX IF NOT EXISTS idx_companies_is_active ON public.companies(is_active);
+CREATE INDEX IF NOT EXISTS idx_companies_last_scraped ON public.companies(last_scraped);
 CREATE INDEX IF NOT EXISTS idx_job_listings_job_site_id ON public.job_listings(job_site_id);
+CREATE INDEX IF NOT EXISTS idx_job_listings_company_id ON public.job_listings(company_id);
 CREATE INDEX IF NOT EXISTS idx_job_listings_status ON public.job_listings(status);
+CREATE INDEX IF NOT EXISTS idx_job_listings_auto_apply ON public.job_listings(auto_apply_enabled);
+CREATE INDEX IF NOT EXISTS idx_job_listings_priority ON public.job_listings(application_priority);
 CREATE INDEX IF NOT EXISTS idx_applications_user_id ON public.applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_job_listing_id ON public.applications(job_listing_id);
 CREATE INDEX IF NOT EXISTS idx_applications_status ON public.applications(status);
@@ -141,6 +174,10 @@ CREATE TRIGGER IF NOT EXISTS set_resume_templates_updated_at
 
 CREATE TRIGGER IF NOT EXISTS set_job_sites_updated_at
   BEFORE UPDATE ON public.job_sites
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+
+CREATE TRIGGER IF NOT EXISTS set_companies_updated_at
+  BEFORE UPDATE ON public.companies
   FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
 
 CREATE TRIGGER IF NOT EXISTS set_job_listings_updated_at

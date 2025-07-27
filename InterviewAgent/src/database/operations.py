@@ -8,10 +8,14 @@ from datetime import datetime, timedelta
 import uuid
 import json
 
-from .connection import get_supabase_client
-from .models import (
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from database.connection import get_supabase_client
+from database.models import (
     User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
-    AgentResult, CoverLetter, OptimizedResume, JobSearch,
+    AgentResult, CoverLetter, OptimizedResume, JobSearch, Company,
     dict_to_model, model_to_dict,
     ApplicationStatus, JobStatus, AgentStatus
 )
@@ -619,6 +623,132 @@ class DatabaseOperations:
         except Exception as e:
             logger.error(f"Failed to get job searches: {str(e)}")
             return []
+    
+    # Company operations
+    async def insert_company(self, company: Company) -> bool:
+        """Insert company into database"""
+        if self.client is None:
+            logger.info(f"Mock mode: Would insert company {company.name}")
+            return True
+        
+        try:
+            company_data = model_to_dict(company)
+            result = self.client.table('companies').insert(company_data).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to insert company: {str(e)}")
+            return False
+    
+    async def get_company_by_name(self, company_name: str) -> Optional[Company]:
+        """Get company by name"""
+        if self.client is None:
+            return None
+        
+        try:
+            result = self.client.table('companies').select('*').eq('name', company_name).execute()
+            if result.data:
+                return dict_to_model(result.data[0], Company)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get company by name: {str(e)}")
+            return None
+    
+    async def get_company_by_domain(self, domain: str) -> Optional[Company]:
+        """Get company by domain"""
+        if self.client is None:
+            return None
+        
+        try:
+            result = self.client.table('companies').select('*').eq('domain', domain).execute()
+            if result.data:
+                return dict_to_model(result.data[0], Company)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get company by domain: {str(e)}")
+            return None
+    
+    # Enhanced Job Listing operations
+    async def insert_job_listing(self, job_listing: JobListing) -> bool:
+        """Insert job listing into database"""
+        if self.client is None:
+            logger.info(f"Mock mode: Would insert job {job_listing.title} at {job_listing.company}")
+            return True
+        
+        try:
+            job_data = model_to_dict(job_listing)
+            result = self.client.table('job_listings').insert(job_data).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to insert job listing: {str(e)}")
+            return False
+    
+    async def get_job_by_url(self, job_url: str) -> Optional[JobListing]:
+        """Get job listing by URL"""
+        if self.client is None:
+            return None
+        
+        try:
+            result = self.client.table('job_listings').select('*').eq('job_url', job_url).execute()
+            if result.data:
+                return dict_to_model(result.data[0], JobListing)
+            return None
+        except Exception as e:
+            logger.error(f"Failed to get job by URL: {str(e)}")
+            return None
+    
+    async def get_user_job_listings(self, user_id: str, limit: int = 50) -> List[JobListing]:
+        """Get job listings for a user (through job sites)"""
+        if self.client is None:
+            # Return mock job listings
+            mock_jobs = []
+            for i in range(min(5, limit)):
+                mock_jobs.append(JobListing(
+                    id=str(uuid.uuid4()),
+                    job_site_id=str(uuid.uuid4()),
+                    title=f"Software Engineer {i+1}",
+                    company=f"Company {i+1}",
+                    job_url=f"https://example.com/job/{i+1}",
+                    location="San Francisco, CA",
+                    description="Exciting opportunity",
+                    salary_range="$120k-$150k",
+                    auto_apply_enabled=True,
+                    application_priority=5,
+                    status=JobStatus.DISCOVERED,
+                    created_at=datetime.now()
+                ))
+            return mock_jobs
+        
+        try:
+            # Get user's job sites first
+            user_sites = self.get_job_sites(user_id)
+            if not user_sites:
+                return []
+            
+            site_ids = [site.id for site in user_sites]
+            
+            query = self.client.table('job_listings').select('*').in_('job_site_id', site_ids)
+            query = query.order('created_at', desc=True).limit(limit)
+            
+            result = query.execute()
+            return [dict_to_model(item, JobListing) for item in result.data]
+        except Exception as e:
+            logger.error(f"Failed to get user job listings: {str(e)}")
+            return []
+    
+    # Enhanced Application operations
+    async def insert_application(self, application: Application) -> bool:
+        """Insert application into database"""
+        if self.client is None:
+            logger.info(f"Mock mode: Would insert application {application.id}")
+            return True
+        
+        try:
+            app_data = model_to_dict(application)
+            result = self.client.table('applications').insert(app_data).execute()
+            return len(result.data) > 0
+        except Exception as e:
+            logger.error(f"Failed to insert application: {str(e)}")
+            return False
 
 # Global database operations instance
 _db_ops = None

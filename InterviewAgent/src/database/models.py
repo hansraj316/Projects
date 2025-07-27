@@ -61,17 +61,44 @@ class JobSite:
     updated_at: Optional[datetime] = None
 
 @dataclass
+class Company:
+    """Company model for career page tracking"""
+    id: str
+    name: str
+    domain: str
+    career_page_url: str
+    industry: Optional[str] = None
+    company_size: Optional[str] = None
+    headquarters: Optional[str] = None
+    description: Optional[str] = None
+    website_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    is_active: bool = True
+    last_scraped: Optional[datetime] = None
+    jobs_found_count: int = 0
+    scraping_difficulty: Optional[str] = None  # easy, medium, hard
+    scraping_notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+@dataclass
 class JobListing:
     """Job listing model"""
     id: str
     job_site_id: str
     title: str
     company: str
+    job_url: str  # Required field - always save job URLs
     location: Optional[str] = None
     description: str = ""
     requirements: Optional[str] = None
     salary_range: Optional[str] = None
-    job_url: str = ""
+    company_id: Optional[str] = None  # Link to Company model
+    remote_type: Optional[str] = None  # remote, hybrid, onsite
+    experience_level: Optional[str] = None  # entry, mid, senior
+    job_type: Optional[str] = None  # full-time, part-time, contract
+    auto_apply_enabled: bool = True  # Enable automatic application
+    application_priority: int = 5  # 1-10 priority for application order
     scraped_at: Optional[datetime] = None
     applied_at: Optional[datetime] = None
     status: JobStatus = JobStatus.DISCOVERED
