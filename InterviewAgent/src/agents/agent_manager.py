@@ -7,8 +7,11 @@ from typing import Dict, Any, Optional
 
 from .base_agent import BaseAgent
 from .enhanced_orchestrator import EnhancedOrchestratorAgent
+from .job_discovery import JobDiscoveryAgent
 from .resume_optimizer import ResumeOptimizerAgent
 from .cover_letter_generator import CoverLetterAgent
+from .application_submitter import ApplicationSubmitterAgent
+from .email_notification import EmailNotificationAgent
 
 
 class AgentManager:
@@ -31,16 +34,25 @@ class AgentManager:
         self.agents["orchestrator"] = self.orchestrator
         
         # Create specialized agents
+        job_discovery = JobDiscoveryAgent(self.config)
         resume_optimizer = ResumeOptimizerAgent(self.config)
         cover_letter_agent = CoverLetterAgent(self.config)
+        application_submitter = ApplicationSubmitterAgent(self.config)
+        email_notification = EmailNotificationAgent(self.config)
         
         # Register agents
+        self.agents["job_discovery"] = job_discovery
         self.agents["resume_optimizer"] = resume_optimizer
         self.agents["cover_letter_generator"] = cover_letter_agent
+        self.agents["application_submitter"] = application_submitter
+        self.agents["email_notification"] = email_notification
         
         # Register with orchestrator
+        self.orchestrator.register_agent(job_discovery)
         self.orchestrator.register_agent(resume_optimizer)
         self.orchestrator.register_agent(cover_letter_agent)
+        self.orchestrator.register_agent(application_submitter)
+        self.orchestrator.register_agent(email_notification)
         
         self.logger.info(f"Initialized {len(self.agents)} agents successfully")
     

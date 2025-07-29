@@ -372,27 +372,44 @@ Best regards,
                 
             except ImportError as e2:
                 self.logger.warning(f"Claude MCP automation not available: {str(e2)}")
-                # Fallback to OpenAI Agents SDK with MCP
+                # Fallback to Enhanced Orchestrator with Responses API agents
                 try:
-                    from agents.openai_mcp_automation_agent import execute_openai_mcp_job_automation
+                    from .enhanced_orchestrator import EnhancedOrchestratorAgent
+                    from .job_discovery import JobDiscoveryAgent
+                    from .resume_optimizer import ResumeOptimizerAgent
+                    from .cover_letter_generator import CoverLetterAgent
+                    from .application_submitter import ApplicationSubmitterAgent
+                    from .email_notification import EmailNotificationAgent
                     
-                    self.logger.info("Using OpenAI Agents SDK with MCP Playwright integration")
+                    self.logger.info("Using Enhanced Orchestrator with Responses API agents")
                     
-                    # Execute automation using OpenAI Agent with real MCP tools
-                    automation_result = await execute_openai_mcp_job_automation(
-                        job_data=job_data,
+                    # Create orchestrator and agents
+                    orchestrator = EnhancedOrchestratorAgent(self.config)
+                    job_discovery = JobDiscoveryAgent(self.config)
+                    resume_optimizer = ResumeOptimizerAgent(self.config)
+                    cover_letter_agent = CoverLetterAgent(self.config)
+                    application_submitter = ApplicationSubmitterAgent(self.config)
+                    email_notification = EmailNotificationAgent(self.config)
+                    
+                    # Register agents with orchestrator
+                    orchestrator.register_agent(job_discovery)
+                    orchestrator.register_agent(resume_optimizer)
+                    orchestrator.register_agent(cover_letter_agent)
+                    orchestrator.register_agent(application_submitter)
+                    orchestrator.register_agent(email_notification)
+                    
+                    # Execute automation workflow
+                    automation_result = await orchestrator.execute_complete_workflow(
+                        job_criteria=job_search_criteria,
                         user_profile=user_profile,
                         resume_data=resume_data,
-                        cover_letter_data=cover_letter_data,
-                        automation_settings={
-                            "screenshot_dir": "data/screenshots"
-                        }
+                        cover_letter_data=cover_letter_data
                     )
                     
                     return automation_result
                     
                 except ImportError as e3:
-                    self.logger.warning(f"OpenAI Agents SDK not available: {str(e3)}")
+                    self.logger.warning(f"Enhanced Orchestrator not available: {str(e3)}")
                     # Fallback to real MCP implementation
                     try:
                         from automation.real_mcp_implementation import execute_real_mcp_job_automation
