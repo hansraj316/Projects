@@ -8,12 +8,8 @@ from datetime import datetime, timedelta
 import uuid
 import json
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from database.connection import get_supabase_client
-from database.models import (
+from .connection import get_supabase_client
+from .models import (
     User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
     AgentResult, CoverLetter, OptimizedResume, JobSearch, Company,
     dict_to_model, model_to_dict,

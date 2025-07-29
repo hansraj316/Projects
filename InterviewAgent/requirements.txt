@@ -1,43 +1,77 @@
+# InterviewAgent Dependencies
+
 # Core Framework
 streamlit>=1.28.0
+python-dotenv>=1.0.0
 
 # AI and OpenAI
-openai>=1.87.0
+openai>=1.0.0
+
+# Database
+supabase>=2.0.0
+psycopg2-binary>=2.9.0
 
 # Web Automation
-playwright>=1.30.0
+playwright>=1.40.0
 
-# Database and Storage
-supabase>=2.0.0
+# Email
+smtplib2>=0.2.0
+
+# Security and Cryptography
+cryptography>=41.0.0
+email-validator>=2.0.0
 
 # Data Processing
 pandas>=2.0.0
-
-# Environment and Configuration
-python-dotenv>=1.0.0
-
-# Security and Encryption
-cryptography>=40.0.0
-
-# Job Scheduling
-apscheduler>=3.0.0
-
-# HTTP Requests and Web Scraping
-requests>=2.25.0
-beautifulsoup4>=4.9.0
-
-# Document Processing and Generation
-python-docx>=0.8.0
-reportlab>=3.5.0
-pypdf>=5.0.0
-PyPDF2>=3.0.0
-
-# Utilities
-pydantic>=1.8.0
-python-multipart>=0.0.5
-
-# Visualization (for Streamlit dashboard)
-plotly>=5.0.0
+requests>=2.31.0
 
 # Development and Testing
-pytest>=7.0.0
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Scheduling
+APScheduler>=3.10.0
+
+# Utilities
+uuid>=1.30
+dataclasses>=0.6  # For Python < 3.7 compatibility
+typing-extensions>=4.8.0
+
+# Optional Dependencies for Enhanced Features
+# Uncomment as needed:
+
+# PDF Processing
+# PyPDF2>=3.0.0
+# pdfplumber>=0.9.0
+
+# Image Processing
+# Pillow>=10.0.0
+
+# Advanced NLP
+# spacy>=3.7.0
+# nltk>=3.8.0
+
+# Monitoring and Metrics
+# prometheus-client>=0.17.0
+# sentry-sdk>=1.38.0
+
+# Database Migrations
+# alembic>=1.12.0
+
+# API Documentation
+# fastapi>=0.104.0  # If adding API endpoints
+# uvicorn>=0.24.0
+
+# Configuration Management
+# pydantic>=2.4.0  # For advanced config validation
+
+# Testing Utilities
+# factory-boy>=3.3.0  # For test data generation
+# responses>=0.24.0  # For mocking HTTP requests
+
+# Development Tools
+# pre-commit>=3.5.0
+# mypy>=1.6.0
+# coverage>=7.3.0

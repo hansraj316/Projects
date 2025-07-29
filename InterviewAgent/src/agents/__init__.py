@@ -2,10 +2,6 @@
 AI Agents package for InterviewAgent
 """
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 try:
     from .base_agent import BaseAgent, AgentTask, AgentContext
     from .resume_optimizer import ResumeOptimizerAgent

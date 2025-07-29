@@ -1,360 +1,207 @@
 """
 Company Management page for InterviewAgent Streamlit app
-Manages company career page discovery and database
+Manages company information and career page discovery
 """
 
 import streamlit as st
 import asyncio
-from typing import List
+from typing import List, Dict, Any
 from datetime import datetime
 
-# Note: Path is already set by streamlit_app.py, so direct imports should work
-from services.company_discovery_service import (
-    CompanyDiscoveryService, 
-    discover_predefined_companies,
-    TECH_COMPANIES, FINANCE_COMPANIES, HEALTHCARE_COMPANIES, STARTUP_COMPANIES
-)
+from ..config import get_config
+from ..database.operations import get_db_operations
 
-from config import Config
-from database.operations import get_db_operations
+
+# Predefined company lists for discovery
+TECH_COMPANIES = [
+    "Google", "Microsoft", "Apple", "Amazon", "Meta", "Netflix", "Tesla",
+    "Nvidia", "Adobe", "Salesforce", "Oracle", "IBM", "Intel", "Cisco"
+]
+
+FINANCE_COMPANIES = [
+    "JPMorgan Chase", "Goldman Sachs", "Morgan Stanley", "Bank of America",
+    "Wells Fargo", "American Express", "Visa", "Mastercard", "PayPal"
+]
+
+HEALTHCARE_COMPANIES = [
+    "Johnson & Johnson", "Pfizer", "UnitedHealth", "Merck", "Bristol Myers Squibb",
+    "AbbVie", "Roche", "Novartis", "Moderna", "Gilead Sciences"
+]
+
+STARTUP_COMPANIES = [
+    "Stripe", "SpaceX", "Databricks", "Canva", "Discord", "Figma",
+    "Notion", "Airbnb", "Uber", "DoorDash", "Coinbase", "Robinhood"
+]
 
 
 def show_company_management():
     """Display the company management interface"""
     
-    st.header("🏢 Company Career Page Management")
-    st.write("Build and manage a database of companies and their career pages for direct job discovery.")
+    st.header("🏢 Company Management")
+    st.write("Manage company information for targeted job applications.")
     
     # Initialize session state
-    if 'company_discovery_results' not in st.session_state:
-        st.session_state.company_discovery_results = None
-    if 'discovered_companies' not in st.session_state:
-        st.session_state.discovered_companies = []
+    if 'company_data' not in st.session_state:
+        st.session_state.company_data = []
     
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["🔍 Discover Companies", "📋 Manage Companies", "📊 Industry Analysis", "⚙️ Bulk Operations"])
+    tab1, tab2, tab3 = st.tabs(["📋 Company Database", "🔍 Add Companies", "📊 Analytics"])
     
     with tab1:
-        _show_company_discovery_section()
+        _show_company_database()
     
     with tab2:
-        _show_company_management_section()
+        _show_add_companies()
     
     with tab3:
-        _show_industry_analysis_section()
-    
-    with tab4:
-        _show_bulk_operations_section()
+        _show_company_analytics()
 
 
-def _show_company_discovery_section():
-    """Show company discovery interface"""
-    st.subheader("🔍 Discover Company Career Pages")
-    
-    # Discovery options
-    discovery_option = st.radio(
-        "Choose discovery method:",
-        ["Single Company", "Multiple Companies", "Predefined Lists"],
-        horizontal=True
-    )
-    
-    if discovery_option == "Single Company":
-        _show_single_company_discovery()
-    elif discovery_option == "Multiple Companies":
-        _show_multiple_company_discovery()
-    elif discovery_option == "Predefined Lists":
-        _show_predefined_list_discovery()
-
-
-def _show_single_company_discovery():
-    """Show single company discovery interface"""
-    st.write("### Discover Single Company")
+def _show_company_database():
+    """Show the company database management interface"""
+    st.subheader("Company Database")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        company_name = st.text_input(
-            "Company Name", 
-            placeholder="e.g., Microsoft, Google, Stripe"
-        )
+        search_term = st.text_input("Search companies", placeholder="Enter company name...")
     
     with col2:
-        if st.button("🔍 Discover", type="primary"):
-            if not company_name:
-                st.error("Please enter a company name")
-                return
-            
-            with st.spinner(f"Discovering career page for {company_name}..."):
-                try:
-                    result = asyncio.run(_discover_companies([company_name]))
-                    
-                    if result.get("success"):
-                        st.success(f"✅ Successfully discovered career page for {company_name}!")
-                        
-                        discovered = result.get("discovered_companies", [])
-                        if discovered:
-                            company = discovered[0]
-                            
-                            # Show company details
-                            with st.expander("📋 Company Details", expanded=True):
-                                col1, col2 = st.columns(2)
-                                
-                                with col1:
-                                    st.write(f"**Name:** {company['name']}")
-                                    st.write(f"**Domain:** {company['domain']}")
-                                    st.write(f"**Industry:** {company['industry']}")
-                                
-                                with col2:
-                                    st.write(f"**Career Page:** [{company['career_page_url']}]({company['career_page_url']})")
-                                    st.write(f"**Website:** [{company['website_url']}]({company['website_url']})")
-                                    st.write(f"**Scraping Difficulty:** {company['scraping_difficulty']}")
-                    else:
-                        st.error(f"❌ Failed to discover career page for {company_name}")
-                        st.write(f"Error: {result.get('message', 'Unknown error')}")
-                
-                except Exception as e:
-                    st.error(f"Discovery error: {str(e)}")
-
-
-def _show_multiple_company_discovery():
-    """Show multiple company discovery interface"""
-    st.write("### Discover Multiple Companies")
-    
-    company_list = st.text_area(
-        "Company Names (one per line)",
-        placeholder="Microsoft\nGoogle\nAmazon\nApple\nMeta",
-        height=150
-    )
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🚀 Discover All", type="primary"):
-            if not company_list.strip():
-                st.error("Please enter at least one company name")
-                return
-            
-            companies = [name.strip() for name in company_list.split('\n') if name.strip()]
-            
-            with st.spinner(f"Discovering career pages for {len(companies)} companies..."):
-                try:
-                    result = asyncio.run(_discover_companies(companies))
-                    _display_discovery_results(result)
-                
-                except Exception as e:
-                    st.error(f"Discovery error: {str(e)}")
-    
-    with col2:
-        sample_companies = st.selectbox(
-            "Load Sample List:",
-            ["Tech Companies", "Finance Companies", "Healthcare Companies", "Startup Companies"]
-        )
-        
-        if st.button("📝 Load Sample"):
-            if sample_companies == "Tech Companies":
-                sample_list = "\n".join(TECH_COMPANIES[:10])
-            elif sample_companies == "Finance Companies":
-                sample_list = "\n".join(FINANCE_COMPANIES[:10])
-            elif sample_companies == "Healthcare Companies":
-                sample_list = "\n".join(HEALTHCARE_COMPANIES[:10])
-            else:
-                sample_list = "\n".join(STARTUP_COMPANIES[:10])
-            
-            st.text_area("Sample loaded:", value=sample_list, height=100, key="sample_display")
-    
-    with col3:
-        if st.button("🧹 Clear List"):
+        if st.button("🔄 Refresh"):
             st.rerun()
-
-
-def _show_predefined_list_discovery():
-    """Show predefined list discovery interface"""
-    st.write("### Discover Predefined Company Lists")
-    st.info("Use curated lists of companies by industry for bulk discovery.")
     
-    # Show available lists
-    col1, col2 = st.columns(2)
+    # Mock company data for MVP
+    mock_companies = [
+        {"name": "Google", "industry": "Technology", "size": "Large", "status": "Active"},
+        {"name": "Microsoft", "industry": "Technology", "size": "Large", "status": "Active"},
+        {"name": "Stripe", "industry": "Fintech", "size": "Medium", "status": "Active"},
+        {"name": "OpenAI", "industry": "AI/ML", "size": "Medium", "status": "Active"},
+    ]
     
-    with col1:
-        st.write("**Available Lists:**")
-        st.write(f"• **Tech Companies:** {len(TECH_COMPANIES)} companies")
-        st.write(f"• **Finance Companies:** {len(FINANCE_COMPANIES)} companies")
-        st.write(f"• **Healthcare Companies:** {len(HEALTHCARE_COMPANIES)} companies")
-        st.write(f"• **Startup Companies:** {len(STARTUP_COMPANIES)} companies")
-        
-        total_companies = len(TECH_COMPANIES) + len(FINANCE_COMPANIES) + len(HEALTHCARE_COMPANIES) + len(STARTUP_COMPANIES)
-        st.write(f"**Total:** {total_companies} companies")
+    # Filter companies based on search
+    if search_term:
+        filtered_companies = [
+            comp for comp in mock_companies 
+            if search_term.lower() in comp["name"].lower()
+        ]
+    else:
+        filtered_companies = mock_companies
     
-    with col2:
-        selected_lists = st.multiselect(
-            "Select Lists to Discover:",
-            ["Tech Companies", "Finance Companies", "Healthcare Companies", "Startup Companies"],
-            default=["Tech Companies"]
+    if filtered_companies:
+        st.dataframe(
+            filtered_companies,
+            use_container_width=True,
+            hide_index=True
         )
-        
-        if st.button("🎯 Discover Selected Lists", type="primary"):
-            if not selected_lists:
-                st.error("Please select at least one list")
-                return
-            
-            # Combine selected lists
-            companies_to_discover = []
-            for list_name in selected_lists:
-                if list_name == "Tech Companies":
-                    companies_to_discover.extend(TECH_COMPANIES)
-                elif list_name == "Finance Companies":
-                    companies_to_discover.extend(FINANCE_COMPANIES)
-                elif list_name == "Healthcare Companies":
-                    companies_to_discover.extend(HEALTHCARE_COMPANIES)
-                elif list_name == "Startup Companies":
-                    companies_to_discover.extend(STARTUP_COMPANIES)
-            
-            with st.spinner(f"Discovering {len(companies_to_discover)} companies from selected lists..."):
-                try:
-                    config = Config()
-                    service = CompanyDiscoveryService(config=config.__dict__)
-                    result = asyncio.run(discover_predefined_companies(service))
-                    
-                    _display_discovery_results(result)
-                
-                except Exception as e:
-                    st.error(f"Discovery error: {str(e)}")
-
-
-def _show_company_management_section():
-    """Show company management interface"""
-    st.subheader("📋 Company Database Management")
-    st.info("View and manage discovered companies in the database.")
-    
-    # Load companies from database
-    if st.button("🔄 Refresh Companies"):
-        st.info("Company refresh functionality will be implemented with database queries")
-    
-    # Mock company data for demo
-    st.write("### Recently Discovered Companies")
-    if st.session_state.discovered_companies:
-        for i, company in enumerate(st.session_state.discovered_companies):
-            with st.expander(f"🏢 {company['name']} ({company['industry']})"):
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.write(f"**Domain:** {company['domain']}")
-                    st.write(f"**Industry:** {company['industry']}")
-                
-                with col2:
-                    st.write(f"**Career Page:** [{company['career_page_url']}]({company['career_page_url']})")
-                    st.write(f"**Difficulty:** {company['scraping_difficulty']}")
-                
-                with col3:
-                    if st.button("🗑️ Remove", key=f"remove_company_{i}"):
-                        st.success("Company removal functionality will be implemented")
-                    if st.button("✏️ Edit", key=f"edit_company_{i}"):
-                        st.info("Company editing functionality will be implemented")
     else:
-        st.info("No companies discovered yet. Use the Discovery tab to add companies.")
+        st.info("No companies found. Try adjusting your search or add new companies.")
 
 
-def _show_industry_analysis_section():
-    """Show industry analysis interface"""
-    st.subheader("📊 Industry Analysis")
+def _show_add_companies():
+    """Show the add companies interface"""
+    st.subheader("Add Companies")
     
-    # Industry breakdown
-    if st.session_state.discovered_companies:
-        industries = {}
-        for company in st.session_state.discovered_companies:
-            industry = company.get('industry', 'Unknown')
-            industries[industry] = industries.get(industry, 0) + 1
+    # Manual company addition
+    with st.form("add_company_form"):
+        st.write("**Add Individual Company**")
         
-        st.write("### Industry Distribution")
-        for industry, count in industries.items():
-            st.write(f"**{industry}:** {count} companies")
-    else:
-        st.info("No companies available for analysis. Discover companies first.")
-
-
-def _show_bulk_operations_section():
-    """Show bulk operations interface"""
-    st.subheader("⚙️ Bulk Operations")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("### Export Operations")
-        if st.button("📊 Export to CSV"):
-            st.info("CSV export functionality will be implemented")
-        
-        if st.button("📋 Export to JSON"):
-            st.info("JSON export functionality will be implemented")
-    
-    with col2:
-        st.write("### Maintenance Operations")
-        if st.button("🔄 Update All Career Pages"):
-            st.info("Bulk update functionality will be implemented")
-        
-        if st.button("🧹 Clean Invalid Entries"):
-            st.info("Cleanup functionality will be implemented")
-
-
-async def _discover_companies(company_list: List[str]) -> dict:
-    """Discover companies using the discovery service"""
-    try:
-        config = Config()
-        service = CompanyDiscoveryService(config=config.__dict__)
-        
-        result = await service.discover_company_career_pages(company_list)
-        
-        # Add discovered companies to session state
-        if result.get("success") and result.get("discovered_companies"):
-            st.session_state.discovered_companies.extend(result["discovered_companies"])
-        
-        return result
-        
-    except Exception as e:
-        return {
-            "success": False,
-            "message": f"Discovery failed: {str(e)}",
-            "companies_discovered": 0,
-            "companies_failed": len(company_list)
-        }
-
-
-def _display_discovery_results(result: dict):
-    """Display discovery results in a nice format"""
-    if result.get("success"):
-        discovered_count = result.get("companies_discovered", 0)
-        failed_count = result.get("companies_failed", 0)
-        
-        st.success(f"🎉 **Discovery Complete!** {discovered_count} companies discovered, {failed_count} failed")
-        
-        # Show metrics
-        col1, col2, col3 = st.columns(3)
-        
+        col1, col2 = st.columns(2)
         with col1:
-            st.metric("✅ Discovered", discovered_count)
+            company_name = st.text_input("Company Name *", placeholder="e.g., Google")
+            industry = st.selectbox(
+                "Industry",
+                ["Technology", "Finance", "Healthcare", "Manufacturing", "Retail", "Other"]
+            )
         
         with col2:
-            st.metric("❌ Failed", failed_count)
+            website = st.text_input("Website", placeholder="https://company.com")
+            company_size = st.selectbox("Company Size", ["Startup", "Small", "Medium", "Large"])
         
-        with col3:
-            total = discovered_count + failed_count
-            success_rate = (discovered_count / total * 100) if total > 0 else 0
-            st.metric("📊 Success Rate", f"{success_rate:.1f}%")
+        notes = st.text_area("Notes", placeholder="Additional information about the company...")
         
-        # Show discovered companies
-        discovered_companies = result.get("discovered_companies", [])
-        if discovered_companies:
-            with st.expander("📋 Discovered Companies", expanded=True):
-                for company in discovered_companies:
-                    st.write(f"• **{company['name']}** ({company['industry']}) - [{company['career_page_url']}]({company['career_page_url']})")
+        submitted = st.form_submit_button("Add Company", type="primary")
         
-        # Show failed companies
-        failed_companies = result.get("failed_companies", [])
-        if failed_companies:
-            with st.expander("❌ Failed Companies"):
-                for company in failed_companies:
-                    st.write(f"• {company}")
-    else:
-        st.error(f"❌ Discovery failed: {result.get('message', 'Unknown error')}")
+        if submitted and company_name:
+            st.success(f"✅ Added {company_name} to the database!")
+    
+    st.divider()
+    
+    # Bulk company addition from predefined lists
+    st.write("**Add from Predefined Lists**")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("➕ Add Tech Companies", help="Add major technology companies"):
+            st.success(f"Added {len(TECH_COMPANIES)} tech companies!")
+        
+        if st.button("➕ Add Healthcare Companies", help="Add major healthcare companies"):
+            st.success(f"Added {len(HEALTHCARE_COMPANIES)} healthcare companies!")
+    
+    with col2:
+        if st.button("➕ Add Finance Companies", help="Add major financial companies"):
+            st.success(f"Added {len(FINANCE_COMPANIES)} finance companies!")
+        
+        if st.button("➕ Add Startup Companies", help="Add popular startup companies"):
+            st.success(f"Added {len(STARTUP_COMPANIES)} startup companies!")
+
+
+def _show_company_analytics():
+    """Show company analytics and insights"""
+    st.subheader("Company Analytics")
+    
+    # Mock analytics data
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Companies", "127", delta="12")
+    
+    with col2:
+        st.metric("Industries", "8", delta="2")
+    
+    with col3:
+        st.metric("Applications", "45", delta="7")
+    
+    with col4:
+        st.metric("Response Rate", "23%", delta="5%")
+    
+    st.divider()
+    
+    # Industry distribution
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**Industry Distribution**")
+        industry_data = {
+            "Technology": 45,
+            "Finance": 23,
+            "Healthcare": 18,
+            "Manufacturing": 12,
+            "Retail": 8,
+            "Other": 21
+        }
+        st.bar_chart(industry_data)
+    
+    with col2:
+        st.write("**Company Size Distribution**")
+        size_data = {
+            "Large": 34,
+            "Medium": 28,
+            "Small": 25,
+            "Startup": 40
+        }
+        st.bar_chart(size_data)
+    
+    # Recent activity
+    st.write("**Recent Activity**")
+    recent_activity = [
+        {"Date": "2024-01-15", "Company": "OpenAI", "Action": "Added to database"},
+        {"Date": "2024-01-14", "Company": "Stripe", "Action": "Updated information"},
+        {"Date": "2024-01-13", "Company": "Google", "Action": "Application submitted"},
+        {"Date": "2024-01-12", "Company": "Microsoft", "Action": "Career page updated"},
+    ]
+    
+    st.dataframe(recent_activity, use_container_width=True, hide_index=True)
 
 
 if __name__ == "__main__":

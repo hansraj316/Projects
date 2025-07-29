@@ -8,13 +8,9 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from agents.cover_letter_generator import CoverLetterAgent
-from agents.base_agent import AgentTask, AgentContext
-from config import Config
+from ..agents.cover_letter_generator import CoverLetterAgent
+from ..agents.base_agent import AgentTask, AgentContext
+from ..config import get_config
 
 def show_applications():
     """Display the applications tracking page with cover letter generation"""

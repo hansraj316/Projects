@@ -10,15 +10,10 @@ from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from agents.resume_optimizer import ResumeOptimizerAgent
-from agents.base_agent import AgentTask, AgentContext
-from config import Config
-from utils.file_handler import FileHandler, extract_text_from_file
-from services.resume_parser import parse_resume_from_text
+from ..agents.resume_optimizer import ResumeOptimizerAgent
+from ..agents.base_agent import AgentTask, AgentContext
+from ..config import get_config
+from ..utils.file_handler import FileHandler, extract_text_from_file
 
 def show_resume_manager():
     """Display the resume manager page with AI optimization"""
