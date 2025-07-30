@@ -9,12 +9,12 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # Note: Path is already set by streamlit_app.py, so direct imports should work
-from agents.job_discovery import JobDiscoveryAgent
-from agents.base_agent import AgentTask, AgentContext
+from src.agents.job_discovery import JobDiscoveryAgent
+from src.agents.base_agent import AgentTask, AgentContext
 
-from config import Config
-from database.operations import get_db_operations
-from services.job_automation_service import JobAutomationService
+from src.config import Config
+from src.database.operations import get_db_operations
+from src.services.job_automation_service import JobAutomationService
 
 def show_job_search():
     """Display the job search page with AI-powered job discovery"""
@@ -647,7 +647,23 @@ async def _search_jobs(
     try:
         # Initialize the agent
         config = Config()
-        agent = JobDiscoveryAgent(config=config.__dict__)
+        
+        # Create simple logger implementation
+        class SimpleLogger:
+            def info(self, message, **kwargs):
+                pass
+            def warning(self, message, **kwargs):
+                pass
+            def error(self, message, **kwargs):
+                pass
+        
+        agent = JobDiscoveryAgent(
+            name="job_discovery",
+            description="AI-powered job discovery agent",
+            logger=SimpleLogger(),
+            openai_client=config.get_openai_client(),
+            config=config
+        )
         
         # Create task
         task = AgentTask(
@@ -701,7 +717,23 @@ async def _analyze_market_trends(
     try:
         # Initialize the agent
         config = Config()
-        agent = JobDiscoveryAgent(config=config.__dict__)
+        
+        # Create simple logger implementation
+        class SimpleLogger:
+            def info(self, message, **kwargs):
+                pass
+            def warning(self, message, **kwargs):
+                pass
+            def error(self, message, **kwargs):
+                pass
+        
+        agent = JobDiscoveryAgent(
+            name="job_discovery",
+            description="AI-powered job discovery agent",
+            logger=SimpleLogger(),
+            openai_client=config.get_openai_client(),
+            config=config
+        )
         
         # Create task
         task = AgentTask(
@@ -745,7 +777,23 @@ async def _research_company(company_name: str) -> Dict[str, Any]:
     try:
         # Initialize the agent
         config = Config()
-        agent = JobDiscoveryAgent(config=config.__dict__)
+        
+        # Create simple logger implementation
+        class SimpleLogger:
+            def info(self, message, **kwargs):
+                pass
+            def warning(self, message, **kwargs):
+                pass
+            def error(self, message, **kwargs):
+                pass
+        
+        agent = JobDiscoveryAgent(
+            name="job_discovery",
+            description="AI-powered job discovery agent",
+            logger=SimpleLogger(),
+            openai_client=config.get_openai_client(),
+            config=config
+        )
         
         # Create task
         task = AgentTask(

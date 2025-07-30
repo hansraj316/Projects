@@ -15,9 +15,8 @@ try:
 except ImportError:
     OpenAI = None
 
-from ..config import get_config
-from ..core.protocols import ILogger, IOpenAIClient, IConfiguration
-from ..core.exceptions import AgentExecutionError, ConfigurationError
+from src.core.protocols import ILogger, IOpenAIClient, IConfiguration
+from src.core.exceptions import AgentExecutionError, ConfigurationError
 
 
 @dataclass

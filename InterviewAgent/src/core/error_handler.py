@@ -81,7 +81,8 @@ class ErrorHandler:
         
         # Check for parent class handlers
         for exc_type, handler in self._error_handlers.items():
-            if isinstance(error, exc_type):\n                return handler(error, error_context)
+            if isinstance(error, exc_type):
+                return handler(error, error_context)
         
         # Default handler for unknown errors
         return self._handle_unknown_error(error, error_context)

@@ -101,13 +101,13 @@ class APIKeyValidator:
     
     # API key patterns for validation
     API_KEY_PATTERNS = {
-        'openai': r'^sk-[a-zA-Z0-9]{48}$|^sk-proj-[a-zA-Z0-9]{48}$',
-        'supabase': r'^[a-zA-Z0-9]{64}$',
-        'anthropic': r'^sk-ant-[a-zA-Z0-9\-_]{95}$'
+        'openai': r'^sk-[a-zA-Z0-9\-_]{20,}$|^sk-proj-[a-zA-Z0-9\-_]{20,}$',
+        'supabase': r'^eyJ[a-zA-Z0-9\-_\.]{100,}$',  # JWT tokens start with eyJ
+        'anthropic': r'^sk-ant-[a-zA-Z0-9\-_]{95,}$'
     }
     
     MIN_KEY_LENGTH = 20
-    MAX_KEY_LENGTH = 200
+    MAX_KEY_LENGTH = 500
     
     @classmethod
     def validate_api_key(cls, key: str, key_type: Optional[str] = None) -> bool:

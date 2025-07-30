@@ -12,12 +12,12 @@ import uuid
 import json
 from enum import Enum
 
-from agents.base_agent import BaseAgent, AgentTask, AgentContext
-from agents.job_discovery import JobDiscoveryAgent
-from agents.resume_optimizer import ResumeOptimizerAgent
-from agents.cover_letter_generator import CoverLetterAgent
-from agents.application_submitter import ApplicationSubmitterAgent
-from agents.email_notification import EmailNotificationAgent
+from src.agents.base_agent import BaseAgent, AgentTask, AgentContext
+from src.agents.job_discovery import JobDiscoveryAgent
+from src.agents.resume_optimizer import ResumeOptimizerAgent
+from src.agents.cover_letter_generator import CoverLetterAgent
+from src.agents.application_submitter import ApplicationSubmitterAgent
+from src.agents.email_notification import EmailNotificationAgent
 
 
 class StepStatus(Enum):

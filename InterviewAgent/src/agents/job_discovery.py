@@ -6,7 +6,7 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 
-from .base_agent import BaseAgent, AgentTask, AgentContext
+from .base_agent import BaseAgent, AgentTask, AgentContext, AgentResult
 
 
 class JobDiscoveryAgent(BaseAgent):
@@ -14,11 +14,14 @@ class JobDiscoveryAgent(BaseAgent):
     AI agent that discovers job opportunities using real web search
     """
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, name: str, description: str, logger, openai_client, config, agent_config: Dict[str, Any] = None):
         super().__init__(
-            name="job_discovery", 
-            description="You are an expert job search specialist. You search for real job opportunities using web search and extract structured information including job titles, companies, locations, requirements, and application URLs from actual job postings.",
-            config=config
+            name=name,
+            description=description,
+            logger=logger,
+            openai_client=openai_client,
+            config=config,
+            agent_config=agent_config
         )
     
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
@@ -40,9 +43,10 @@ class JobDiscoveryAgent(BaseAgent):
             if task_type == "search_jobs":
                 result = await self._search_jobs(task, context)
             else:
-                result = self.create_result(
+                result = AgentResult(
                     success=False,
-                    message=f"Only 'search_jobs' task type is supported. Got: {task_type}"
+                    error=f"Only 'search_jobs' task type is supported. Got: {task_type}",
+                    agent_name=self.name
                 )
             
             self.log_task_completion(task, result)
@@ -50,12 +54,13 @@ class JobDiscoveryAgent(BaseAgent):
             
         except Exception as e:
             self.log_task_error(task, e)
-            return self.create_result(
+            return AgentResult(
                 success=False,
-                message=f"Job discovery failed: {str(e)}"
+                error=f"Job discovery failed: {str(e)}",
+                agent_name=self.name
             )
     
-    async def _search_jobs(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:
+    async def _search_jobs(self, task: AgentTask, context: AgentContext) -> AgentResult:
         """
         Search for jobs using OpenAI web search with specified criteria
         
@@ -73,9 +78,10 @@ class JobDiscoveryAgent(BaseAgent):
         remote_preference = task.input_data.get("remote_preference", "")
         
         if not job_title:
-            return self.create_result(
+            return AgentResult(
                 success=False,
-                message="Job title is required for search"
+                error="Job title is required for search",
+                agent_name=self.name
             )
         
         # Build optimized search query for job boards
@@ -111,7 +117,7 @@ Return the results as a JSON array of job objects. Only include jobs with valid 
             # Parse and validate the JSON response
             jobs_data = self._parse_web_search_results(search_results)
             
-            return self.create_result(
+            return AgentResult(
                 success=True,
                 data={
                     "jobs": jobs_data,
@@ -125,7 +131,7 @@ Return the results as a JSON array of job objects. Only include jobs with valid 
                         "remote_preference": remote_preference
                     }
                 },
-                message=f"Found {len(jobs_data)} job opportunities from web search",
+                agent_name=self.name,
                 metadata={
                     "search_date": datetime.now().isoformat(),
                     "search_method": "openai_web_search",
@@ -135,9 +141,10 @@ Return the results as a JSON array of job objects. Only include jobs with valid 
             )
             
         except Exception as e:
-            return self.create_result(
+            return AgentResult(
                 success=False,
-                message=f"Web search failed: {str(e)}"
+                error=f"Web search failed: {str(e)}",
+                agent_name=self.name
             )
     
     def _parse_web_search_results(self, search_results: str) -> List[Dict[str, Any]]:

@@ -8,9 +8,9 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 
-from ..agents.cover_letter_generator import CoverLetterAgent
-from ..agents.base_agent import AgentTask, AgentContext
-from ..config import get_config
+from src.agents.cover_letter_generator import CoverLetterAgent
+from src.agents.base_agent import AgentTask, AgentContext
+from src.config import get_config
 
 def show_applications():
     """Display the applications tracking page with cover letter generation"""

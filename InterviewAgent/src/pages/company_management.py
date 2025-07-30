@@ -8,8 +8,8 @@ import asyncio
 from typing import List, Dict, Any
 from datetime import datetime
 
-from ..config import get_config
-from ..database.operations import get_db_operations
+from src.config import get_config
+from src.database.operations import get_db_operations
 
 
 # Predefined company lists for discovery

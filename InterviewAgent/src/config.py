@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from dotenv import load_dotenv
 import openai
 
-from .core.security import get_security_config, SecurityError
-from .core.exceptions import ConfigurationError
+from src.core.security import get_security_config, SecurityError
+from src.core.exceptions import ConfigurationError
 
 # Load environment variables
 load_dotenv()
