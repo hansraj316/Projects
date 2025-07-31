@@ -1,8 +1,0 @@
-Screenshot placeholder - 20250727_163841
-Filename: initial_page_20250727_163841.png
-Timestamp: 2025-07-27T16:38:41.095932
-URL: https://www.builtinseattle.com/jobs/dev-engineering/management
-Browser: MCP Playwright (simulated)
-
-This file confirms that the screenshot directory is writable.
-In actual deployment, this would be a real PNG screenshot.
