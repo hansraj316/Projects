@@ -9,6 +9,8 @@ import uuid
 import json
 
 from .connection import get_supabase_client
+from ..core.exceptions import SecurityError, ValidationError
+from ..core.input_validation import get_global_validator
 from .models import (
     User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
     AgentResult, CoverLetter, OptimizedResume, JobSearch, Company,
@@ -663,6 +665,132 @@ class DatabaseOperations:
             logger.error(f"Failed to get company by domain: {str(e)}")
             return None
     
+    # Secure User Profile operations
+    async def get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Securely get user profile data with validation
+        
+        Args:
+            user_id: User ID to retrieve profile for
+            
+        Returns:
+            User profile data or None if not found
+            
+        Raises:
+            SecurityError: If user authentication fails
+            ValidationError: If user_id is invalid
+        """
+        # Validate user_id input
+        validator = get_global_validator()
+        user_id_validation = validator.validate_and_sanitize(user_id, "user_id")
+        
+        if not user_id_validation.is_valid:
+            raise ValidationError(f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
+        
+        sanitized_user_id = user_id_validation.sanitized_data
+        
+        if self.client is None:
+            # For development/testing - return mock data with validation
+            logger.warning("Using mock user profile data - not suitable for production")
+            return {
+                "first_name": "Development",
+                "last_name": "User", 
+                "email": "dev@example.com",
+                "phone": "+1-555-0123",
+                "address": "123 Dev Street, Test City, TC 12345",
+                "linkedin_url": "https://linkedin.com/in/devuser",
+                "work_authorization": "yes",
+                "requires_sponsorship": "no",
+                "availability": "immediately"
+            }
+        
+        try:
+            # Get user profile from secure database
+            result = self.client.table('user_profiles').select('*').eq('user_id', sanitized_user_id).execute()
+            
+            if not result.data:
+                logger.warning(f"User profile not found for user {sanitized_user_id}")
+                raise SecurityError("User profile not found - authentication required")
+            
+            profile_data = result.data[0]
+            
+            # Validate and sanitize profile data before returning
+            profile_validation = validator.validate_and_sanitize(profile_data, "user_profile")
+            
+            if not profile_validation.is_valid:
+                logger.error(f"User profile data validation failed", extra={
+                    "user_id": sanitized_user_id,
+                    "errors": profile_validation.errors
+                })
+                raise SecurityError("User profile data integrity check failed")
+            
+            return profile_validation.sanitized_data
+            
+        except SecurityError:
+            raise  # Re-raise security errors as-is
+        except Exception as e:
+            logger.error("Failed to retrieve user profile", extra={
+                "user_id": sanitized_user_id,
+                "error_type": type(e).__name__
+            })
+            raise SecurityError("Failed to authenticate user profile") from e
+    
+    async def update_user_profile(self, user_id: str, profile_data: Dict[str, Any]) -> bool:
+        """
+        Securely update user profile with validation
+        
+        Args:
+            user_id: User ID to update profile for
+            profile_data: New profile data
+            
+        Returns:
+            True if successful
+            
+        Raises:
+            SecurityError: If user authentication fails
+            ValidationError: If input data is invalid
+        """
+        # Validate inputs
+        validator = get_global_validator()
+        
+        user_id_validation = validator.validate_and_sanitize(user_id, "user_id")
+        if not user_id_validation.is_valid:
+            raise ValidationError(f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
+        
+        profile_validation = validator.validate_and_sanitize(profile_data, "profile_data")
+        if not profile_validation.is_valid:
+            raise ValidationError(f"Invalid profile data: {'; '.join(profile_validation.errors)}")
+        
+        sanitized_user_id = user_id_validation.sanitized_data
+        sanitized_profile = profile_validation.sanitized_data
+        
+        if self.client is None:
+            logger.info(f"Mock mode: Would update profile for user {sanitized_user_id}")
+            return True
+        
+        try:
+            # Add metadata
+            sanitized_profile.update({
+                'updated_at': datetime.now().isoformat(),
+                'user_id': sanitized_user_id
+            })
+            
+            # Update user profile in database
+            result = self.client.table('user_profiles').upsert(sanitized_profile).eq('user_id', sanitized_user_id).execute()
+            
+            success = len(result.data) > 0
+            if success:
+                logger.info(f"User profile updated successfully", extra={"user_id": sanitized_user_id})
+            
+            return success
+            
+        except Exception as e:
+            logger.error("Failed to update user profile", extra={
+                "user_id": sanitized_user_id,
+                "error_type": type(e).__name__
+            })
+            raise SecurityError("Failed to update user profile") from e
+
     # Enhanced Job Listing operations
     async def insert_job_listing(self, job_listing: JobListing) -> bool:
         """Insert job listing into database"""
@@ -755,3 +883,14 @@ def get_db_operations() -> DatabaseOperations:
     if _db_ops is None:
         _db_ops = DatabaseOperations()
     return _db_ops
+
+# Global secure access functions
+async def get_user_profile(user_id: str) -> Optional[Dict[str, Any]]:
+    """Global secure function to get user profile"""
+    db_ops = get_db_operations()
+    return await db_ops.get_user_profile(user_id)
+
+async def update_user_profile(user_id: str, profile_data: Dict[str, Any]) -> bool:
+    """Global secure function to update user profile"""
+    db_ops = get_db_operations()
+    return await db_ops.update_user_profile(user_id, profile_data)

@@ -13,6 +13,11 @@ from datetime import datetime
 from dataclasses import dataclass
 
 from .base_agent import BaseAgent, AgentTask, AgentContext
+from ..core.exceptions import SecurityError, ValidationError
+from ..core.input_validation import (
+    validate_model_input, JobSearchCriteriaValidator,
+    AutomationConfigValidator, get_global_validator
+)
 
 
 @dataclass
@@ -41,8 +46,12 @@ class SimpleAutomationController(BaseAgent):
         )
         
         self.config = config or {}
+        # Use thread-safe collections to prevent race conditions
+        import threading
+        self._workflow_lock = threading.RLock()
         self.active_workflows = {}
         self.workflow_history = []
+        self._max_workflows = 100  # Prevent memory leaks
         
         # Setup logging
         self.logger = logging.getLogger(__name__)
@@ -61,7 +70,36 @@ class SimpleAutomationController(BaseAgent):
         workflow_id = str(uuid.uuid4())
         start_time = datetime.now()
         
-        self.logger.info(f"Starting automation workflow {workflow_id} for user {user_id}")
+        # Validate all inputs before processing
+        try:
+            # Validate user_id
+            if not user_id or not isinstance(user_id, str) or len(user_id.strip()) == 0:
+                raise ValidationError("Invalid user ID provided")
+            
+            # Validate job search criteria
+            validated_criteria = validate_model_input(job_search_criteria, JobSearchCriteriaValidator)
+            
+            # Validate automation config
+            validated_config = validate_model_input(automation_config, AutomationConfigValidator)
+            
+            # Validate saved jobs if provided
+            if saved_jobs:
+                validator = get_global_validator()
+                jobs_validation = validator.validate_and_sanitize(saved_jobs, "saved_jobs")
+                if not jobs_validation.is_valid:
+                    raise ValidationError(f"Invalid saved jobs data: {'; '.join(jobs_validation.errors)}")
+                saved_jobs = jobs_validation.sanitized_data
+            
+            self.logger.info(f"Starting validated automation workflow {workflow_id}")
+            
+        except (ValidationError, ValueError) as e:
+            sanitized_error = "Invalid input data provided for automation workflow"
+            self.logger.warning("Automation workflow validation failed", extra={
+                "workflow_id": workflow_id,
+                "user_id": user_id,
+                "error_type": type(e).__name__
+            })
+            return self._create_failed_result(workflow_id, sanitized_error, start_time)
         
         try:
             # Step 1: Job Search - use saved jobs if provided
@@ -101,7 +139,7 @@ class SimpleAutomationController(BaseAgent):
                 
                 # Step 5: Playwright Automation (if enabled)
                 if automation_config.get("auto_submit", False):
-                    playwright_result = await self._execute_playwright_automation(job_data, resume_result, cover_letter_result)
+                    playwright_result = await self._execute_playwright_automation(job_data, resume_result, cover_letter_result, user_id)
                     detailed_results.append(playwright_result)
                     
                     if playwright_result["success"]:
@@ -128,14 +166,28 @@ class SimpleAutomationController(BaseAgent):
                 detailed_results=detailed_results
             )
             
-            # Store workflow
-            self.active_workflows[workflow_id] = result
+            # Store workflow with thread safety and memory management
+            with self._workflow_lock:
+                # Prevent memory leaks - remove oldest workflows if limit exceeded
+                if len(self.active_workflows) >= self._max_workflows:
+                    oldest_workflow = min(self.active_workflows.keys())
+                    del self.active_workflows[oldest_workflow]
+                    self.logger.info(f"Removed oldest workflow {oldest_workflow} to prevent memory leak")
+                
+                self.active_workflows[workflow_id] = result
             
             return result
             
         except Exception as e:
-            self.logger.error(f"Automation workflow failed: {str(e)}")
-            return self._create_failed_result(workflow_id, str(e), start_time)
+            # Sanitize error message to prevent information disclosure
+            sanitized_error = "Automation workflow failed due to internal error"
+            self.logger.error(f"Automation workflow failed", extra={
+                "workflow_id": workflow_id,
+                "user_id": user_id,
+                "error_type": type(e).__name__,
+                "sanitized_error": sanitized_error
+            })
+            return self._create_failed_result(workflow_id, sanitized_error, start_time)
 
     async def _execute_job_search(self, criteria: Dict[str, Any], saved_jobs: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute job search step - use saved jobs if provided, otherwise fetch real jobs"""
@@ -159,46 +211,12 @@ class SimpleAutomationController(BaseAgent):
                     raise Exception("Real job fetching failed")
                     
             except Exception as e:
-                self.logger.warning(f"Real job fetching failed: {str(e)}, using fallback real jobs")
-                # Fallback to curated real job URLs
-                jobs = [
-                    {
-                        "id": "real_job_google",
-                        "title": f"{criteria.get('job_title', 'Software Engineer')}",
-                        "company": "Google",
-                        "location": criteria.get("location", "Mountain View, CA"),
-                        "summary": "Join Google's engineering team to build products that help billions of users.",
-                        "skills": ["Python", "JavaScript", "React", "Google Cloud", "Kubernetes"],
-                        "application_url": "https://careers.google.com/jobs/results/",
-                        "apply_link": "https://careers.google.com/jobs/results/",
-                        "source": "Google Careers",
-                        "is_real_job": True
-                    },
-                    {
-                        "id": "real_job_microsoft",
-                        "title": f"{criteria.get('job_title', 'Software Engineer')}",
-                        "company": "Microsoft",
-                        "location": criteria.get("location", "Seattle, WA"),
-                        "summary": "Build next-generation software solutions at Microsoft.",
-                        "skills": ["C#", "JavaScript", "Azure", "React", "TypeScript"],
-                        "application_url": "https://careers.microsoft.com/professionals/us/en/search-results",
-                        "apply_link": "https://careers.microsoft.com/professionals/us/en/search-results",
-                        "source": "Microsoft Careers",
-                        "is_real_job": True
-                    },
-                    {
-                        "id": "real_job_amazon",
-                        "title": f"{criteria.get('job_title', 'Software Engineer')}",
-                        "company": "Amazon",
-                        "location": criteria.get("location", "Seattle, WA"),
-                        "summary": "Develop scalable solutions for Amazon's global platform.",
-                        "skills": ["Java", "Python", "AWS", "React", "Docker"],
-                        "application_url": "https://amazon.jobs/en/search",
-                        "apply_link": "https://amazon.jobs/en/search",
-                        "source": "Amazon Jobs",
-                        "is_real_job": True
-                    }
-                ]
+                # Production mode - never use fallback data
+                self.logger.error("Real job fetching failed", extra={
+                    "error_type": type(e).__name__,
+                    "operation": "job_search"
+                })
+                raise SecurityError("Job search service is currently unavailable. Please try again later.") from e
         
         return {
             "step": "job_search",
@@ -297,21 +315,42 @@ Best regards,
         }
 
     async def _execute_playwright_automation(self, job_data: Dict[str, Any], 
-                                           resume_result: Dict[str, Any], cover_letter_result: Dict[str, Any]) -> Dict[str, Any]:
+                                           resume_result: Dict[str, Any], cover_letter_result: Dict[str, Any],
+                                           user_id: str = None) -> Dict[str, Any]:
         """Execute Playwright automation step using MCP Playwright integration"""
         
-        # Prepare user profile data (define outside try blocks to avoid scope issues)
-        user_profile = {
-            "first_name": "John",  # In real implementation, get from user data
-            "last_name": "Doe",
-            "email": "john.doe@example.com",
-            "phone": "+1-555-0123",
-            "address": "123 Main St, City, State 12345",
-            "linkedin_url": "https://linkedin.com/in/johndoe",
-            "work_authorization": "Yes",
-            "requires_sponsorship": "No",
-            "availability": "Immediately"
-        }
+        # Get user profile from secure configuration - never hardcode credentials
+        try:
+            from ..core.security import get_security_config
+            from ..database.operations import get_user_profile
+            
+            security_config = get_security_config()
+            user_profile_data = await get_user_profile(user_id)
+            
+            if not user_profile_data:
+                raise SecurityError("User profile not found - authentication required")
+            
+            # Validate required fields exist
+            required_fields = ["first_name", "last_name", "email"]
+            missing_fields = [field for field in required_fields if not user_profile_data.get(field)]
+            if missing_fields:
+                raise SecurityError(f"Missing required user profile fields: {missing_fields}")
+            
+            user_profile = {
+                "first_name": user_profile_data.get("first_name", ""),
+                "last_name": user_profile_data.get("last_name", ""),
+                "email": user_profile_data.get("email", ""),
+                "phone": user_profile_data.get("phone", ""),
+                "address": user_profile_data.get("address", ""),
+                "linkedin_url": user_profile_data.get("linkedin_url", ""),
+                "work_authorization": user_profile_data.get("work_authorization", ""),
+                "requires_sponsorship": user_profile_data.get("requires_sponsorship", ""),
+                "availability": user_profile_data.get("availability", "")
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to load user profile securely: {str(e)}")
+            raise SecurityError("Failed to authenticate user for automation") from e
         
         # Prepare resume data
         resume_data = {
@@ -483,24 +522,25 @@ Best regards,
         )
 
     def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
-        """Get workflow status"""
+        """Get workflow status with thread safety"""
         
-        if workflow_id in self.active_workflows:
-            workflow = self.active_workflows[workflow_id]
-            return {
-                "success": True,
-                "workflow_id": workflow_id,
-                "status": "completed" if workflow.success else "failed",
-                "total_jobs_found": workflow.total_jobs_found,
-                "applications_created": workflow.applications_created,
-                "applications_submitted": workflow.applications_submitted,
-                "execution_summary": workflow.execution_summary,
-                "detailed_results": workflow.detailed_results
-            }
+        with self._workflow_lock:
+            if workflow_id in self.active_workflows:
+                workflow = self.active_workflows[workflow_id]
+                return {
+                    "success": True,
+                    "workflow_id": workflow_id,
+                    "status": "completed" if workflow.success else "failed",
+                    "total_jobs_found": workflow.total_jobs_found,
+                    "applications_created": workflow.applications_created,
+                    "applications_submitted": workflow.applications_submitted,
+                    "execution_summary": workflow.execution_summary,
+                    "detailed_results": workflow.detailed_results
+                }
         
         return {
             "success": False,
-            "error": f"Workflow {workflow_id} not found"
+            "error": "Workflow not found or has been archived"
         }
 
     async def execute(self, task: AgentTask, context: AgentContext) -> Dict[str, Any]:

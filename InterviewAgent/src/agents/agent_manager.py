@@ -85,11 +85,14 @@ class AgentManager:
                 agent_name = agent_configs[i][0]
                 
                 if isinstance(result, Exception):
+                    # Use secure error handling - don't expose internal details
+                    sanitized_error = "Agent initialization failed due to internal error"
                     self._logger.error(f"Failed to initialize agent {agent_name}", extra={
                         "agent_name": agent_name,
-                        "error": str(result)
+                        "error_type": type(result).__name__,
+                        "sanitized_error": sanitized_error
                     })
-                    self._record_agent_health(agent_name, False, str(result))
+                    self._record_agent_health(agent_name, False, sanitized_error)
                 else:
                     successful_agents.append(agent_name)
                     self._record_agent_health(agent_name, True)
@@ -102,9 +105,10 @@ class AgentManager:
                         try:
                             self.orchestrator.register_agent(agent)
                         except Exception as e:
+                            # Use secure logging - don't expose sensitive details
                             self._logger.warning(f"Failed to register agent {agent_name} with orchestrator", extra={
                                 "agent_name": agent_name,
-                                "error": str(e)
+                                "error_type": type(e).__name__
                             })
             
             # Setup circuit breakers for agents
