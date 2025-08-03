@@ -134,6 +134,7 @@ class BaseAgent(ABC):
         """
         Execute a task with the given context
         
+        
         Args:
             task: The task to execute
             context: Shared context information
