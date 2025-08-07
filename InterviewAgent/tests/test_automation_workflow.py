@@ -5,15 +5,14 @@ Tests the entire InterviewAgent multi-agent system
 """
 
 import sys
-import os
 import asyncio
+from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any
 
 # Add project root to path
-sys.path.append('.')
-sys.path.append('src')
-os.chdir('/Users/hansraj/Preparation/Projects/InterviewAgent')
+repo_root = Path(__file__).resolve().parents[1]
+sys.path.append(str(repo_root / "src"))
 
 def test_imports():
     """Test all critical imports"""
@@ -22,11 +21,11 @@ def test_imports():
     try:
         from src.config import get_config
         from src.agents.base_agent import BaseAgent, AgentTask, AgentContext
-        from src.agents.orchestrator import OrchestratorAgent
+        from src.agents.enhanced_orchestrator import EnhancedOrchestratorAgent
         from src.agents.job_discovery import JobDiscoveryAgent
         from src.agents.resume_optimizer import ResumeOptimizerAgent
         from src.agents.cover_letter_generator import CoverLetterAgent
-        from src.agents.automation_controller import AutomationController
+        from src.agents.simple_automation_controller import SimpleAutomationController
         from src.automation.scheduler import AutomationScheduler
         from src.utils.document_generator import DocumentGenerator
         print("✅ All critical components imported successfully")
@@ -123,14 +122,14 @@ def test_agent_initialization():
     
     try:
         from src.config import get_config
-        from src.agents.orchestrator import OrchestratorAgent
+        from src.agents.enhanced_orchestrator import EnhancedOrchestratorAgent
         from src.agents.resume_optimizer import ResumeOptimizerAgent
         from src.agents.cover_letter_generator import CoverLetterAgent
         
         config = get_config()
         
         # Test orchestrator initialization
-        orchestrator = OrchestratorAgent(config.__dict__)
+        orchestrator = EnhancedOrchestratorAgent(config.__dict__)
         print(f"✅ Orchestrator initialized: {len(orchestrator.registered_agents)} agents registered")
         
         # Test individual agent initialization
@@ -152,10 +151,10 @@ def test_workflow_creation():
     
     try:
         from src.config import get_config
-        from src.agents.orchestrator import OrchestratorAgent
+        from src.agents.enhanced_orchestrator import EnhancedOrchestratorAgent
         
         config = get_config()
-        orchestrator = OrchestratorAgent(config.__dict__)
+        orchestrator = EnhancedOrchestratorAgent(config.__dict__)
         
         # Sample job and user data
         job_data = {
@@ -261,11 +260,11 @@ async def test_mock_workflow_execution():
     
     try:
         from src.config import get_config
-        from src.agents.orchestrator import OrchestratorAgent
+        from src.agents.enhanced_orchestrator import EnhancedOrchestratorAgent
         from src.agents.base_agent import AgentTask, AgentContext
         
         config = get_config()
-        orchestrator = OrchestratorAgent(config.__dict__)
+        orchestrator = EnhancedOrchestratorAgent(config.__dict__)
         
         # Create a simple mock task
         task = AgentTask(
@@ -313,7 +312,7 @@ def print_system_summary():
     print("✅ Comprehensive Error Handling")
     
     print("\n🤖 AGENT SYSTEM:")
-    print("• OrchestratorAgent - Workflow coordination")
+    print("• EnhancedOrchestratorAgent - Workflow coordination")
     print("• JobDiscoveryAgent - AI-powered job search")
     print("• ResumeOptimizerAgent - Resume customization")
     print("• CoverLetterAgent - Personalized cover letters")
