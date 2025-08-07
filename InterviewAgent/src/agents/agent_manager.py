@@ -235,12 +235,13 @@ class AgentManager:
             # Get health information
             health_info = self._agent_health.get(name, {})
             circuit_breaker_info = self._circuit_breakers.get(name)
-            
+            last_check = health_info.get("last_check")
+
             status[name] = {
                 "name": agent.name,
                 "description": agent.description,
                 "healthy": health_info.get("healthy", False),
-                "last_health_check": health_info.get("last_check", {}).get("isoformat", lambda: None)() if health_info.get("last_check") else None,
+                "last_health_check": last_check.isoformat() if last_check else None,
                 "health_error": health_info.get("error"),
                 "circuit_breaker_state": circuit_breaker_info.state if circuit_breaker_info else "N/A",
                 "failure_count": circuit_breaker_info.failure_count if circuit_breaker_info else 0,
