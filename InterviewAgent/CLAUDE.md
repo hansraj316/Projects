@@ -1,37 +1,26 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with the InterviewAgent codebase.
 
 ## Project Overview
 
 InterviewAgent is an AI-powered job application automation system built with Python, Streamlit, and OpenAI SDK. The system helps job candidates automatically apply to positions using AI agents for resume optimization, cover letter generation, and web automation.
 
-## Development Command
+## Quick Start
 
 ```bash
-# Setup virtual environment
+# Setup and start application
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Install Playwright browsers (for automation)
 playwright install
-
-# Quick Start (Recommended)
 python3 run_app.py
 
-# Manual Streamlit start
+# Alternative manual start
 streamlit run streamlit_app.py
 
-# Run component tests
+# Testing and code quality
 python3 test_app.py
-
-# Database migration (manual execution in Supabase)
-# Use src/database/migrations.sql in Supabase SQL editor
-
-# Format code (when available)
 black src/
 flake8 src/
 ```
