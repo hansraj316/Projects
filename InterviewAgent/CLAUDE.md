@@ -25,111 +25,58 @@ black src/
 flake8 src/
 ```
 
-## Architecture Overview
+## Architecture
 
-### Agent System
-- **Main Orchestrator**: Coordinates all automation workflows with intelligent data flow
-- **Job Discovery Agent**: AI-powered job search, analysis, and market research
-- **Resume Optimization Agent**: AI-powered resume customization with industry research
-- **Cover Letter Agent**: Generates personalized cover letters with company research
-- **Application Submission Agent**: Automates form filling and submission using Playwright MCP
-- **Email Notification Agent**: Sends updates via Gmail MCP with workflow coordination
-
-### Technology Stack
+**Technology Stack:**
 - Frontend: Streamlit (Python web framework)
 - Backend: Python with integrated Streamlit app
 - Database: Supabase (PostgreSQL + Storage)
 - AI: OpenAI Python SDK with function calling and MCP integration
 - Automation: Playwright MCP Server for web automation
 - Email: Gmail MCP Server for email notifications
-- Scheduling: APScheduler for recurring automation
-- MCP Integration: Playwright and Gmail MCP servers
 
-### Key Directories
+**Key Directories:**
 - `/src/agents/` - AI agent implementations
-- `/src/database/` - Supabase database operations and models
+- `/src/database/` - Database operations and models
 - `/src/pages/` - Streamlit page components
-- `/src/utils/` - Utility functions and helpers
-- `/docs/` - Project documentation and progress tracking
+- `/src/utils/` - Utility functions
+- `/docs/` - Documentation
 - `/tests/` - Test suites
-- `/data/` - Local data storage
-- `/templates/` - Default templates
 
-## Important Development Notes
+## Current Status
 
-### Current Status - MVP COMPLETE, PRODUCTION HARDENING REQUIRED ⚠️
-**Complete automation system implemented successfully (2025-07-18)**
-**Code Review Completed (2025-07-29) - Security & Architecture Analysis**
-**Technical Program Manager & Architecture Reviewer Analysis (2025-08-05)**
+**MVP COMPLETE** - Production hardening required
 
-**✅ COMPLETED FEATURES:**
-- ✅ **Phase 1**: Working Streamlit application with full navigation
-- ✅ **Phase 2**: Complete AI agent framework with OpenAI integration
-- ✅ **Phase 4**: Full automation system with MCP server integration
-- ✅ End-to-end job application automation workflow
-- ✅ Playwright automation for web form submission
-- ✅ Gmail integration for email notifications
-- ✅ APScheduler for recurring automation
-- ✅ Comprehensive automation control panel
-- ✅ BaseAgent class with proper abstraction and error handling
-- ✅ Security-conscious design foundations
+**✅ Implemented Features:**
+- Working Streamlit application with full navigation
+- Complete AI agent framework with OpenAI integration
+- End-to-end job application automation workflow
+- Playwright automation for web form submission
+- Gmail integration for email notifications
+- BaseAgent class with proper abstraction
 
-**🔒 SECURITY HARDENING REQUIRED BEFORE PRODUCTION (CRITICAL - Week 1):**
-- ❌ **API Key Security**: Azure Key Vault/AWS Secrets Manager integration needed
-- ❌ **Credential Encryption**: AES-256 encryption with PBKDF2 key derivation
-- ❌ **Input Validation**: Pydantic validation framework for all user inputs
-- ❌ **Error Exposure**: Sanitized error messages and secure logging
-- ❌ **Production Configs**: Remove mock fallbacks and hardcoded values
+**⚠️ Production Requirements:**
+- **Security**: API key management, credential encryption, input validation
+- **Architecture**: Dependency injection, repository pattern, service layer
+- **Testing**: >80% coverage, integration tests, security tests
 
-**🏗️ ARCHITECTURE IMPROVEMENTS NEEDED (HIGH - Week 2):**
-- ❌ **Service Container**: Complete dependency injection across all agents
-- ❌ **Repository Pattern**: Finish database abstraction layer implementation
-- ❌ **Service Layer**: Complete business logic separation from infrastructure
-- ❌ **MCP Integration**: Unified service abstraction for Playwright/Gmail MCP
+## Development Guidelines
 
-**🧪 TESTING FRAMEWORK REQUIRED (HIGH - Week 3):**
-- ❌ **Unit Testing**: Achieve >80% coverage with comprehensive mocking
-- ❌ **Integration Testing**: Complete workflow and API testing suite
-- ❌ **Security Testing**: Penetration testing and vulnerability assessment
-- ❌ **Performance Testing**: Load testing and benchmarking
+**Getting Started:**
+1. Run `python3 run_app.py` to start the application
+2. Access at http://localhost:8501
+3. Use mock mode for development without Supabase
 
-### Single-User MVP
-- This is a single-user application for MVP
-- No authentication system initially
-- User configuration in environment variables
-- Database operations assume single user context
-
-### Getting Started
-1. **Quick Start**: Run `python3 run_app.py` 
-2. **Manual Start**: Run `streamlit run streamlit_app.py`
-3. **Testing**: Run `python3 test_app.py` to verify components
-4. **App Access**: Open http://localhost:8501
-
-### Progress Tracking
-- All major tasks are tracked in `docs/TASKS.md`
-- Project plan is maintained in `docs/project-plan.md`
-- Update progress files when completing milestones
-- **Phase 1 completed** - ready for agent development
-
-### Configuration Management
+**Configuration:**
 - Environment variables in `.env` file (copy from `.env.example`)
 - Configuration class in `src/config.py`
-- Job site configurations in config
-- User preferences stored in database
+- Database models in `src/database/models.py`
 
-### Database Operations
-- Models defined in `src/database/models.py`
-- Operations in `src/database/operations.py`
-- Connection management in `src/database/connection.py`
-- Migration SQL in `src/database/migrations.sql`
-- **Mock mode** available for development without real Supabase
-
-### Streamlit Development
+**Streamlit Development:**
 - Main app in `streamlit_app.py`
 - Page components in `src/pages/`
 - Use `st.session_state` for state management
 - Cache database connections with `@st.cache_resource`
-- Full navigation between Dashboard, Resume Manager, Job Search, Applications, Notifications, Settings
 
 ### Agent Development Guidelines - PRODUCTION PATTERNS
 
