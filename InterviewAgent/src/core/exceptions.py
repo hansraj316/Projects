@@ -30,6 +30,11 @@ class InterviewAgentException(Exception):
             "cause": str(self.cause) if self.cause else None
         }
 
+
+class BaseInterviewAgentError(InterviewAgentException):
+    """Backward-compatible base exception alias."""
+    pass
+
 class ConfigurationError(InterviewAgentException):
     """Configuration-related errors"""
     pass

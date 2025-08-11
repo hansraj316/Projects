@@ -5,7 +5,7 @@ Simple test script to verify InterviewAgent components
 
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 def test_imports():
     """Test that all modules can be imported"""
