@@ -3,15 +3,15 @@ AI Agents package for InterviewAgent
 """
 
 try:
-    from .base_agent import BaseAgent, AgentTask, AgentContext
-    from .resume_optimizer import ResumeOptimizerAgent
-    from .cover_letter_generator import CoverLetterAgent
-    from .job_discovery import JobDiscoveryAgent
+    from agents.base_agent import BaseAgent, AgentTask, AgentContext
+    from agents.resume_optimizer import ResumeOptimizerAgent
+    from agents.cover_letter_generator import CoverLetterAgent
+    from agents.job_discovery import JobDiscoveryAgent
     
     # Try to import enhanced orchestrator and agent_manager if they exist
     try:
-        from .enhanced_orchestrator import EnhancedOrchestratorAgent
-        from .agent_manager import AgentManager
+        from agents.enhanced_orchestrator import EnhancedOrchestratorAgent
+        from agents.agent_manager import AgentManager
         orchestrator_available = True
     except ImportError:
         EnhancedOrchestratorAgent = None

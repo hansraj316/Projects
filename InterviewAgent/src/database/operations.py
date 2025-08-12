@@ -8,10 +8,10 @@ from datetime import datetime, timedelta
 import uuid
 import json
 
-from .connection import get_supabase_client
-from ..core.exceptions import SecurityError, ValidationError
-from ..core.input_validation import get_global_validator
-from .models import (
+from database.connection import get_supabase_client
+from core.exceptions import SecurityError, ValidationError
+from core.input_validation import get_global_validator
+from database.models import (
     User, ResumeTemplate, JobSite, JobListing, Application, Schedule, AgentLog,
     AgentResult, CoverLetter, OptimizedResume, JobSearch, Company,
     dict_to_model, model_to_dict,

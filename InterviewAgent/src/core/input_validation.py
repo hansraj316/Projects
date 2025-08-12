@@ -204,9 +204,9 @@ class JobSearchCriteriaValidator(BaseModel):
     keywords: List[str] = Field(default_factory=list, max_items=20)
     salary_min: Optional[int] = Field(None, ge=0, le=1000000)
     salary_max: Optional[int] = Field(None, ge=0, le=2000000)
-    experience_level: Optional[str] = Field(None, regex=r'^(entry|junior|mid|senior|lead|executive)$')
+    experience_level: Optional[str] = Field(None, pattern=r'^(entry|junior|mid|senior|lead|executive)$')
     job_types: List[str] = Field(default_factory=list, max_items=10)
-    remote_preference: Optional[str] = Field(None, regex=r'^(onsite|hybrid|remote|remote_only)$')
+    remote_preference: Optional[str] = Field(None, pattern=r'^(onsite|hybrid|remote|remote_only)$')
     
     @validator('job_title', 'location')
     def validate_required_strings(cls, v):
@@ -240,12 +240,12 @@ class UserProfileValidator(BaseModel):
     """Validated user profile data"""
     first_name: str = Field(..., min_length=1, max_length=50)
     last_name: str = Field(..., min_length=1, max_length=50)
-    email: str = Field(..., regex=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-    phone: Optional[str] = Field(None, regex=r'^\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$')
+    email: str = Field(..., pattern=r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    phone: Optional[str] = Field(None, pattern=r'^\+?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$')
     address: Optional[str] = Field(None, max_length=200)
     linkedin_url: Optional[str] = Field(None, max_length=200)
-    work_authorization: Optional[str] = Field(None, regex=r'^(yes|no|visa_required)$', default='yes')
-    requires_sponsorship: Optional[str] = Field(None, regex=r'^(yes|no)$', default='no')
+    work_authorization: Optional[str] = Field(default='yes', pattern=r'^(yes|no|visa_required)$')
+    requires_sponsorship: Optional[str] = Field(default='no', pattern=r'^(yes|no)$')
     availability: Optional[str] = Field(None, max_length=100)
     
     @validator('first_name', 'last_name')
@@ -279,7 +279,7 @@ class AutomationConfigValidator(BaseModel):
     max_applications_per_day: int = Field(default=5, ge=1, le=50)
     rate_limit_delay: int = Field(default=5, ge=1, le=300)  # seconds
     schedule_enabled: bool = Field(default=False)
-    schedule_time: Optional[str] = Field(None, regex=r'^([01]?[0-9]|2[0-3]):[0-5][0-9]$')
+    schedule_time: Optional[str] = Field(None, pattern=r'^([01]?[0-9]|2[0-3]):[0-5][0-9]$')
     notification_email: bool = Field(default=True)
     optimize_resume_per_job: bool = Field(default=True)
     

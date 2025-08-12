@@ -7,17 +7,17 @@ from typing import Dict, Any, Optional, List
 import asyncio
 from datetime import datetime
 
-from .base_agent import BaseAgent, AgentTask, AgentContext, AgentResult
-from .enhanced_orchestrator import EnhancedOrchestratorAgent
-from .job_discovery import JobDiscoveryAgent
-from .resume_optimizer import ResumeOptimizerAgent
-from .cover_letter_generator import CoverLetterAgent
-from .application_submitter import ApplicationSubmitterAgent
-from .email_notification import EmailNotificationAgent
-from ..core.container import ServiceContainer
-from ..core.protocols import ILogger, IConfiguration, IOpenAIClient, IMetrics
-from ..core.exceptions import AgentExecutionError, ConfigurationError
-from ..core.error_handler import ErrorHandler, CircuitBreaker, RetryHandler
+from agents.base_agent import BaseAgent, AgentTask, AgentContext, AgentResult
+from agents.enhanced_orchestrator import EnhancedOrchestratorAgent
+from agents.job_discovery import JobDiscoveryAgent
+from agents.resume_optimizer import ResumeOptimizerAgent
+from agents.cover_letter_generator import CoverLetterAgent
+from agents.application_submitter import ApplicationSubmitterAgent
+from agents.email_notification import EmailNotificationAgent
+from core.container import ServiceContainer
+from core.protocols import ILogger, IConfiguration, IOpenAIClient, IMetrics
+from core.exceptions import AgentExecutionError, ConfigurationError
+from core.error_handler import ErrorHandler, CircuitBreaker, RetryHandler
 
 
 class AgentManager:
