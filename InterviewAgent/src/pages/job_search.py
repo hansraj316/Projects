@@ -9,12 +9,12 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 # Note: Path is already set by streamlit_app.py, so direct imports should work
-from src.agents.job_discovery import JobDiscoveryAgent
-from src.agents.base_agent import AgentTask, AgentContext
+from agents.job_discovery import JobDiscoveryAgent
+from agents.base_agent import AgentTask, AgentContext
 
-from src.config import Config
-from src.database.operations import get_db_operations
-from src.services.job_automation_service import JobAutomationService
+from config import Config
+from database.operations import get_db_operations
+from services.job_automation_service import JobAutomationService
 
 def show_job_search():
     """Display the job search page with AI-powered job discovery"""
@@ -699,7 +699,12 @@ async def _search_jobs(
         
         # Execute the task
         result = await agent.execute(task, context)
-        return result
+        
+        # Convert AgentResult to dict format
+        if hasattr(result, 'success'):
+            return result.to_dict()
+        else:
+            return result
         
     except Exception as e:
         return {

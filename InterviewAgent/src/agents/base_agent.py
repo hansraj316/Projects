@@ -15,8 +15,8 @@ try:
 except ImportError:
     OpenAI = None
 
-from src.core.protocols import ILogger, IOpenAIClient, IConfiguration
-from src.core.exceptions import AgentExecutionError, ConfigurationError
+from core.protocols import ILogger, IOpenAIClient, IConfiguration
+from core.exceptions import AgentExecutionError, ConfigurationError
 
 
 @dataclass
