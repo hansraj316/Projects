@@ -6,6 +6,15 @@ This file provides guidance to Claude Code when working with the InterviewAgent 
 
 InterviewAgent is an AI-powered job application automation system built with Python, Streamlit, and OpenAI SDK. The system helps job candidates automatically apply to positions using AI agents for resume optimization, cover letter generation, and web automation.
 
+## Latest Updates
+
+- Encrypted credential storage and secure configuration options
+- Comprehensive input validation across all endpoints
+- Dependency injection container with clear service layer separation
+- Circuit breaker and retry mechanisms for robust error handling
+- Health monitoring with real-time agent status metrics
+- Streamlit UI enhancements including analytics dashboard and agent management
+
 ## Quick Start
 
 ```bash
@@ -14,13 +23,12 @@ python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 playwright install
-python3 run_app.py
-
-# Alternative manual start
-streamlit run streamlit_app.py
+cp .env.example .env  # update with your credentials
+python scripts/setup_database.py
+python run_app.py  # or: streamlit run streamlit_app.py
 
 # Testing and code quality
-python3 test_app.py
+pytest tests/
 black src/
 flake8 src/
 ```
