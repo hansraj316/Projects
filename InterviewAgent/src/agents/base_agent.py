@@ -253,21 +253,30 @@ class BaseAgent(ABC):
             if not model:
                 model = openai_config.get('model', 'gpt-4o-mini')
             
-            # Build the request
-            request_data = {
-                "model": model,
-                "input": input_text,
-                "instructions": self.description,
-                "temperature": openai_config.get('temperature', 0.7),
-                "max_output_tokens": openai_config.get('max_tokens', 4000)
-            }
-            
-            # Add tools if provided
-            if tools:
-                request_data["tools"] = tools
-            
-            # Make the API call
-            response = self._openai_client.create_response(**request_data)
+            # Check if this is a mock client (for development)
+            if hasattr(self._openai_client, '_generate_mock_jobs'):
+                # Using mock client - simplified request
+                response = self._openai_client.create_response(
+                    input=input_text,
+                    model=model,
+                    tools=tools
+                )
+            else:
+                # Using real OpenAI client - full Responses API request
+                request_data = {
+                    "model": model,
+                    "input": input_text,
+                    "instructions": self.description,
+                    "temperature": openai_config.get('temperature', 0.7),
+                    "max_output_tokens": openai_config.get('max_tokens', 4000)
+                }
+                
+                # Add tools if provided
+                if tools:
+                    request_data["tools"] = tools
+                
+                # Make the API call
+                response = self._openai_client.create_response(**request_data)
             
             # Extract response text with improved parsing
             return self._extract_response_text(response)
@@ -278,7 +287,9 @@ class BaseAgent(ABC):
                 'input_length': len(input_text),
                 'model': model
             })
-            raise AgentExecutionError(self.name, f"Failed to get AI response: {str(e)}") from e
+            # Return a more helpful error message instead of raising exception
+            error_msg = f"AI service temporarily unavailable. Error: {str(e)}"
+            return f"{{\"success\": false, \"error\": \"{error_msg}\"}}"
     
     def _extract_response_text(self, response: Any) -> str:
         """Extract text from OpenAI response with multiple fallback strategies"""

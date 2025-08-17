@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Ignore screenshot directories
+data/screenshots/
+data/demo_screenshots/
+data/test_screenshots/
+.playwright-mcp/

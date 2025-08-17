@@ -8,10 +8,10 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 import asyncio
 
-from ..repositories.interfaces import IJobRepository, IApplicationRepository
-from ..core.protocols import ILogger, IValidator, IEventBus, IMetrics
-from ..core.exceptions import ValidationError, DatabaseError
-from ..agents.base_agent import BaseAgent, AgentTask, AgentContext, AgentResult
+from repositories.interfaces import IJobRepository, IApplicationRepository
+from core.protocols import ILogger, IValidator, IEventBus, IMetrics
+from core.exceptions import ValidationError, DatabaseError
+from agents.base_agent import BaseAgent, AgentTask, AgentContext, AgentResult
 
 class JobSearchCriteria:
     """Job search criteria with validation"""

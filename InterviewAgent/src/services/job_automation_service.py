@@ -9,10 +9,10 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
 
-from ..config import get_config
-from ..database.operations import get_db_operations
-from ..agents.job_discovery import JobDiscoveryAgent
-from ..agents.base_agent import AgentTask, AgentContext
+from config import get_config
+from database.operations import get_db_operations
+from agents.job_discovery import JobDiscoveryAgent
+from agents.base_agent import AgentTask, AgentContext
 
 logger = logging.getLogger(__name__)
 

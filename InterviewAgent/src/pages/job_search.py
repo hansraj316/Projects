@@ -134,11 +134,17 @@ def _show_job_search_section():
                     jobs_saved = automation_results.get("jobs_saved", 0)
                     automations_triggered = automation_results.get("automations_triggered", 0)
                     
+                    # Get actual jobs count from the result
+                    jobs_found = len(result.get("data", {}).get("jobs", []))
+                    
                     # Success message with automation details
                     success_msg = f"🎉 **Search Complete!**\n"
-                    success_msg += f"• **{jobs_saved} jobs** automatically saved to database\n"
-                    success_msg += f"• **{automations_triggered} applications** queued for automation\n"
-                    success_msg += f"• Jobs are now trackable with URLs for easy access"
+                    success_msg += f"• **{jobs_found} jobs** found and displayed\n"
+                    if jobs_saved > 0:
+                        success_msg += f"• **{jobs_saved} jobs** automatically saved to database\n"
+                    if automations_triggered > 0:
+                        success_msg += f"• **{automations_triggered} applications** queued for automation\n"
+                    success_msg += f"• Jobs are now viewable with direct application URLs"
                     
                     st.success(success_msg)
                     
@@ -163,10 +169,32 @@ def _show_job_search_section():
                     
                     st.balloons()
                 else:
-                    st.error(f"Search failed: {result.get('message', 'Unknown error')}")
+                    # Improved error handling with specific error messages
+                    error_message = result.get('message', 'Unknown error occurred')
+                    if 'error' in result:
+                        error_message = result['error']
+                    
+                    # Check for common error types and provide helpful messages
+                    if 'API' in error_message or 'client' in error_message.lower():
+                        st.error("🔧 **Job Search Service Issue**\n\nThe job search service is currently experiencing issues. This might be due to:\n- API configuration problems\n- Network connectivity issues\n- Service maintenance\n\nPlease try again in a few minutes.")
+                    elif 'timeout' in error_message.lower():
+                        st.error("⏰ **Search Timeout**\n\nThe job search took too long to complete. Try:\n- Simplifying your search criteria\n- Searching for a more specific job title\n- Trying again in a moment")
+                    elif 'configuration' in error_message.lower():
+                        st.error("⚙️ **Configuration Issue**\n\nThere's a configuration problem with the job search service. Please contact support or try again later.")
+                    else:
+                        st.error(f"❌ **Search Failed**\n\n{error_message}\n\nPlease try:\n- Checking your search criteria\n- Using a different job title\n- Trying again in a moment")
             
             except Exception as e:
-                st.error(f"Search error: {str(e)}")
+                # Improved exception handling with specific error types
+                error_str = str(e)
+                if 'OpenAI' in error_str or 'API' in error_str:
+                    st.error("🔧 **AI Service Unavailable**\n\nThe AI-powered job search is currently unavailable. This might be due to:\n- Service maintenance\n- API limits reached\n- Network connectivity issues\n\nPlease try again later.")
+                elif 'timeout' in error_str.lower():
+                    st.error("⏰ **Request Timeout**\n\nThe search request timed out. Please try again with simpler criteria.")
+                elif 'connection' in error_str.lower() or 'network' in error_str.lower():
+                    st.error("🌐 **Network Issue**\n\nUnable to connect to job search services. Please check your internet connection and try again.")
+                else:
+                    st.error(f"❌ **Unexpected Error**\n\nAn unexpected error occurred: {error_str}\n\nPlease try again or contact support if the issue persists.")
     
     # Show search results
     if st.session_state.search_results:

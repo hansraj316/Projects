@@ -13,20 +13,22 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 try:
-    from agents import AgentManager, AgentTask, AgentContext
+    from agents.base_agent import AgentTask, AgentContext
+    from config import get_config
     agents_available = True
+    
+    # Try to import the full agent system
+    try:
+        from core.bootstrap import create_application, initialize_application
+        full_agent_system_available = True
+    except ImportError:
+        full_agent_system_available = False
+        
 except ImportError:
-    AgentManager = None
     AgentTask = None
     AgentContext = None
     agents_available = False
-
-try:
-    from config import load_config
-except ImportError:
-    from config import Config
-    def load_config():
-        return Config()
+    full_agent_system_available = False
 
 
 def show_ai_agents():
@@ -34,29 +36,46 @@ def show_ai_agents():
     st.title("🤖 AI Agents")
     st.markdown("Demonstrate and test the AI-powered agents for job application automation.")
     
-    if not agents_available or AgentManager is None:
-        st.error("⚠️ AI Agents functionality is not available. AgentManager not found.")
+    if not agents_available:
+        st.warning("⚠️ AI Agents core modules not available. Showing demo mode.")
         st.info("This page demonstrates the AI agent capabilities. The agents are integrated into the Resume Manager, Job Search, and Applications pages.")
+        show_simplified_agent_demo()
         return
     
-    # Initialize agent manager
-    if 'agent_manager' not in st.session_state:
+    # Check if full agent system is available
+    if not full_agent_system_available:
+        st.warning("⚠️ Full agent system not available. Showing simplified demo mode.")
+        show_simplified_agent_demo()
+        return
+    
+    # Initialize agent manager with full dependency injection
+    if 'app_components' not in st.session_state:
         try:
-            config = load_config()
-            agent_manager = AgentManager(config)
-            agent_manager.initialize_agents()
-            st.session_state.agent_manager = agent_manager
-            st.success("🎉 AI Agents initialized successfully!")
+            with st.spinner("Initializing AI agent system..."):
+                # Create the full application
+                app_components = create_application()
+                
+                # Initialize asynchronously
+                import asyncio
+                asyncio.run(initialize_application(app_components))
+                
+                st.session_state.app_components = app_components
+                st.success("🎉 AI Agents initialized successfully!")
         except Exception as e:
             st.error(f"Failed to initialize agents: {str(e)}")
-            st.session_state.agent_manager = None
+            st.session_state.app_components = None
+            # Fall back to simplified demo
+            show_simplified_agent_demo()
             return
     
-    agent_manager = st.session_state.agent_manager
+    app_components = st.session_state.app_components
     
-    if agent_manager is None:
-        st.error("Agent manager not available")
+    if app_components is None:
+        st.warning("⚠️ Full agent system not available. Switching to demo mode.")
+        show_simplified_agent_demo()
         return
+    
+    agent_manager = app_components["agent_manager"]
     
     # Agent Status Overview
     st.header("📊 Agent Status")
@@ -65,24 +84,25 @@ def show_ai_agents():
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Total Agents", len(status))
+        st.metric("Total Agents", status.get("total_agents", 0))
     with col2:
-        openai_agents = sum(1 for s in status.values() if s['has_openai'])
-        st.metric("OpenAI Enabled", openai_agents)
+        st.metric("Healthy Agents", status.get("healthy_agents", 0))
     with col3:
-        config_agents = sum(1 for s in status.values() if s['config_loaded'])
-        st.metric("Configured", config_agents)
+        st.metric("Orchestrator", "✅" if status.get("orchestrator_available", False) else "❌")
     
     # Agent Details
     st.subheader("🔧 Agent Details")
-    for name, info in status.items():
+    agent_details = status.get("agents", {})
+    for name, info in agent_details.items():
         with st.expander(f"{name.replace('_', ' ').title()}"):
             col1, col2 = st.columns(2)
             with col1:
-                st.write(f"**Description:** {info['description']}")
-                st.write(f"**OpenAI Available:** {'✅' if info['has_openai'] else '❌'}")
+                st.write(f"**Description:** {info.get('description', 'N/A')}")
+                st.write(f"**Healthy:** {'✅' if info.get('healthy', False) else '❌'}")
             with col2:
-                st.write(f"**Configuration Loaded:** {'✅' if info['config_loaded'] else '❌'}")
+                deps = info.get('dependencies_available', {})
+                st.write(f"**OpenAI Client:** {'✅' if deps.get('openai_client', False) else '❌'}")
+                st.write(f"**Config:** {'✅' if deps.get('config', False) else '❌'}")
     
     st.markdown("---")
     
@@ -333,6 +353,114 @@ def show_ai_agents():
                 st.success(f"🎉 All {total_count} agents are working correctly!")
             else:
                 st.warning(f"⚠️ {passed_count}/{total_count} agents passed tests")
+
+
+def show_simplified_agent_demo():
+    """Show a simplified agent demo when the full system isn't available"""
+    
+    st.info("📝 **Demo Mode**: Full agent system not available. Showing conceptual demonstration.")
+    
+    # Mock agent status
+    st.header("📊 Mock Agent Status")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Agents", 5)
+    with col2:
+        st.metric("Demo Mode", "✅")
+    with col3:
+        st.metric("Configuration", "⚙️")
+    
+    # Available agents demo
+    st.subheader("🤖 Available Agent Types")
+    
+    agents_info = {
+        "Resume Optimizer": {
+            "description": "AI-powered resume optimization for specific job requirements",
+            "status": "Available in production",
+            "features": ["Job-specific keyword optimization", "Format enhancement", "Skills matching"]
+        },
+        "Cover Letter Generator": {
+            "description": "Personalized cover letter generation based on job description",
+            "status": "Available in production", 
+            "features": ["Company research integration", "Tone customization", "Template variety"]
+        },
+        "Job Discovery": {
+            "description": "Intelligent job search and discovery agent",
+            "status": "Available in production",
+            "features": ["Multi-platform search", "Relevance scoring", "Automated filtering"]
+        },
+        "Application Submitter": {
+            "description": "Automated job application submission",
+            "status": "Development",
+            "features": ["Form auto-fill", "Document upload", "Submission tracking"]
+        },
+        "Email Notification": {
+            "description": "Automated email notifications and follow-ups",
+            "status": "Available in production",
+            "features": ["Status updates", "Interview reminders", "Follow-up sequences"]
+        }
+    }
+    
+    for agent_name, info in agents_info.items():
+        with st.expander(f"🔧 {agent_name}"):
+            st.write(f"**Description:** {info['description']}")
+            st.write(f"**Status:** {info['status']}")
+            st.write("**Features:**")
+            for feature in info['features']:
+                st.write(f"• {feature}")
+    
+    st.markdown("---")
+    
+    # Demo functionality
+    st.header("🎯 Demo Functionality")
+    
+    tab1, tab2 = st.tabs(["Resume Optimization Demo", "Cover Letter Demo"])
+    
+    with tab1:
+        st.subheader("📄 Resume Optimization Preview")
+        
+        job_desc = st.text_area(
+            "Job Description",
+            value="We are seeking a Python Developer with experience in AI/ML, web development, and database management.",
+            height=100
+        )
+        
+        if st.button("🚀 Preview Optimization", key="resume_demo"):
+            st.success("✅ Optimization complete! (Demo)")
+            st.write("**Sample optimizations:**")
+            st.write("• Added relevant keywords: 'Python', 'AI/ML', 'web development'")
+            st.write("• Enhanced technical skills section")
+            st.write("• Improved project descriptions for relevance")
+            st.write("• Adjusted formatting for ATS compatibility")
+    
+    with tab2:
+        st.subheader("📝 Cover Letter Generation Preview")
+        
+        company_name = st.text_input("Company Name", value="TechCorp Inc.")
+        job_title = st.text_input("Job Title", value="Python Developer")
+        
+        if st.button("✍️ Preview Generation", key="cover_demo"):
+            st.success("✅ Cover letter generated! (Demo)")
+            with st.expander("📄 Sample Cover Letter"):
+                st.write(f"""
+                Dear TechCorp Inc. Hiring Team,
+                
+                I am writing to express my strong interest in the {job_title} position at {company_name}. 
+                With my background in Python development and experience in AI/ML technologies, I am excited 
+                about the opportunity to contribute to your innovative team.
+                
+                [This is a demo preview - the actual system would generate a full, personalized cover letter]
+                
+                Thank you for your consideration.
+                
+                Best regards,
+                [Your Name]
+                """)
+    
+    st.markdown("---")
+    
+    st.info("💡 **Note**: To access the full agent system, ensure all dependencies are properly configured and the application is running in production mode.")
 
 
 if __name__ == "__main__":

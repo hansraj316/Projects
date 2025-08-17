@@ -14,8 +14,8 @@ from .interfaces import (
     IUserRepository, INotificationRepository, ICredentialRepository,
     IAnalyticsRepository
 )
-from ..core.protocols import IDatabaseConnection, ILogger
-from ..core.exceptions import DatabaseError, ValidationError
+from core.protocols import IDatabaseConnection, ILogger
+from core.exceptions import DatabaseError, ValidationError
 
 class BaseSupabaseRepository:
     """Base class for Supabase repositories"""

@@ -4,12 +4,13 @@ Protocol definitions for InterviewAgent
 Defines interfaces for dependency injection and service contracts.
 """
 
-from typing import Protocol, Dict, Any, Optional, List
+from typing import Protocol, Dict, Any, Optional, List, runtime_checkable
 from abc import abstractmethod
 from datetime import datetime
 
 from .exceptions import InterviewAgentException
 
+@runtime_checkable
 class ILogger(Protocol):
     """Logger interface"""
     
@@ -19,12 +20,14 @@ class ILogger(Protocol):
     def error(self, message: str, **kwargs) -> None: ...
     def critical(self, message: str, **kwargs) -> None: ...
 
+@runtime_checkable
 class IOpenAIClient(Protocol):
     """OpenAI client interface"""
     
     def create_response(self, **kwargs) -> Any: ...
     def create_chat_completion(self, **kwargs) -> Any: ...
 
+@runtime_checkable
 class IConfiguration(Protocol):
     """Configuration interface"""
     
@@ -33,6 +36,7 @@ class IConfiguration(Protocol):
     def get_security_config(self) -> Dict[str, Any]: ...
     def is_debug_mode(self) -> bool: ...
 
+@runtime_checkable
 class IEncryption(Protocol):
     """Encryption service interface"""
     
@@ -41,6 +45,7 @@ class IEncryption(Protocol):
     def hash_password(self, password: str) -> str: ...
     def verify_password(self, password: str, hashed: str) -> bool: ...
 
+@runtime_checkable
 class IValidator(Protocol):
     """Input validation interface"""
     
@@ -49,6 +54,7 @@ class IValidator(Protocol):
     def validate_job_data(self, job_data: Dict[str, Any]) -> bool: ...
     def sanitize_input(self, input_data: str) -> str: ...
 
+@runtime_checkable
 class IDatabaseConnection(Protocol):
     """Database connection interface"""
     
@@ -56,6 +62,7 @@ class IDatabaseConnection(Protocol):
     def execute_mutation(self, mutation: str, params: Optional[Dict] = None) -> Any: ...
     def close(self) -> None: ...
 
+@runtime_checkable
 class IEventBus(Protocol):
     """Event bus interface for decoupled communication"""
     
@@ -63,6 +70,7 @@ class IEventBus(Protocol):
     def subscribe(self, event_type: str, handler: callable) -> None: ...
     def unsubscribe(self, event_type: str, handler: callable) -> None: ...
 
+@runtime_checkable
 class IMetrics(Protocol):
     """Metrics collection interface"""
     
@@ -70,12 +78,14 @@ class IMetrics(Protocol):
     def record_histogram(self, name: str, value: float, tags: Optional[Dict[str, str]] = None) -> None: ...
     def set_gauge(self, name: str, value: float, tags: Optional[Dict[str, str]] = None) -> None: ...
 
+@runtime_checkable
 class IEmailService(Protocol):
     """Email service interface"""
     
     def send_email(self, to: str, subject: str, body: str, html: bool = False) -> bool: ...
     def send_template_email(self, to: str, template: str, data: Dict[str, Any]) -> bool: ...
 
+@runtime_checkable
 class IWebAutomation(Protocol):
     """Web automation interface"""
     

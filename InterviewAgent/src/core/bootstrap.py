@@ -13,18 +13,32 @@ from .security import get_security_config
 from .validation import InputValidator
 from .error_handler import ErrorHandler
 from .protocols import ILogger, IConfiguration, IOpenAIClient, IValidator, IMetrics
-from ..config import AppConfig, Config
-from ..repositories.interfaces import IJobRepository, IApplicationRepository
-from ..repositories.supabase_repositories import SupabaseJobRepository, SupabaseApplicationRepository
-from ..services.job_service import JobService
-from ..agents.agent_manager import AgentManager
+from config import AppConfig, Config
+from repositories.interfaces import IJobRepository, IApplicationRepository
+from repositories.supabase_repositories import SupabaseJobRepository, SupabaseApplicationRepository
+from services.job_service import JobService
+from agents.agent_manager import AgentManager
 
 # Mock implementations for development/testing
 class MockOpenAIClient:
     """Mock OpenAI client for development"""
     
     def create_response(self, **kwargs):
-        """Mock response creation"""
+        """Mock response creation with realistic job search results"""
+        input_text = kwargs.get('input', '')
+        
+        # Check if this is a job search request
+        if 'jobs' in input_text.lower() and ('search' in input_text.lower() or 'extract' in input_text.lower()):
+            # Return realistic job search JSON
+            mock_jobs = self._generate_mock_jobs(input_text)
+            
+            class MockResponse:
+                def __init__(self, jobs_json):
+                    self.output_text = jobs_json
+            
+            return MockResponse(mock_jobs)
+        
+        # Default mock response for other requests
         class MockResponse:
             def __init__(self):
                 self.output_text = f"[MOCK] Generated response for: {kwargs.get('input', 'unknown input')[:50]}..."
@@ -44,6 +58,88 @@ class MockOpenAIClient:
                 self.choices = [MockChoice()]
         
         return MockCompletion()
+    
+    def _generate_mock_jobs(self, search_input):
+        """Generate realistic mock job data based on search input"""
+        import json
+        import random
+        
+        # Extract job title from input if possible
+        job_title = "Software Engineer"  # Default
+        if 'Technical Program Manager' in search_input:
+            job_title = "Technical Program Manager"
+        elif 'Data Scientist' in search_input:
+            job_title = "Data Scientist"
+        elif 'Product Manager' in search_input:
+            job_title = "Product Manager"
+        elif 'DevOps' in search_input:
+            job_title = "DevOps Engineer"
+        elif 'Engineer' in search_input:
+            job_title = "Software Engineer"
+        
+        # Extract location from input if possible
+        location = "Remote"  # Default
+        if 'Seattle' in search_input:
+            location = "Seattle, WA"
+        elif 'San Francisco' in search_input:
+            location = "San Francisco, CA"
+        elif 'New York' in search_input:
+            location = "New York, NY"
+        elif 'Austin' in search_input:
+            location = "Austin, TX"
+        
+        # Generate realistic job listings
+        companies = [
+            "Amazon", "Microsoft", "Google", "Meta", "Apple",
+            "Netflix", "Spotify", "Uber", "Airbnb", "Stripe",
+            "Shopify", "Zoom", "Slack", "Datadog", "Snowflake"
+        ]
+        
+        job_types = ["Full-time", "Contract", "Part-time"]
+        experience_levels = ["Entry Level", "Mid Level", "Senior Level"]
+        remote_types = ["Remote", "Hybrid", "On-site"]
+        
+        jobs = []
+        for i in range(random.randint(5, 12)):  # Generate 5-12 jobs
+            company = random.choice(companies)
+            
+            # Generate realistic job URLs
+            if company == "Amazon":
+                job_url = f"https://amazon.jobs/en/jobs/{random.randint(1000000, 9999999)}/{job_title.lower().replace(' ', '-')}"
+            elif company == "Microsoft":
+                job_url = f"https://careers.microsoft.com/us/en/job/{random.randint(1000000, 9999999)}/{job_title.replace(' ', '-')}"
+            elif company == "Google":
+                job_url = f"https://careers.google.com/jobs/results/{random.randint(1000000, 9999999)}"
+            else:
+                job_url = f"https://{company.lower()}.com/careers/job/{random.randint(1000, 9999)}"
+            
+            # Generate salary range
+            base_salary = random.randint(80, 200) * 1000
+            salary_range = f"${base_salary:,} - ${base_salary + random.randint(20, 50) * 1000:,}"
+            
+            # Generate skills
+            all_skills = [
+                "Python", "JavaScript", "React", "Node.js", "AWS", "Docker",
+                "Kubernetes", "Git", "SQL", "MongoDB", "Redis", "GraphQL",
+                "TypeScript", "Vue.js", "Angular", "Java", "Go", "Rust"
+            ]
+            skills = random.sample(all_skills, random.randint(3, 6))
+            
+            job = {
+                "job_title": f"{job_title} - {company}",
+                "company": company,
+                "location": location if 'remote' not in search_input.lower() else random.choice([location, "Remote"]),
+                "job_url": job_url,
+                "salary_range": salary_range,
+                "experience_level": random.choice(experience_levels),
+                "remote_type": random.choice(remote_types),
+                "requirements": f"We are looking for a talented {job_title} to join our team. {random.choice(['Strong problem-solving skills required.', 'Experience with agile methodologies preferred.', 'Excellent communication skills essential.'])}",
+                "posted_date": f"{random.randint(1, 14)} days ago",
+                "source": random.choice(["LinkedIn", "Indeed", "Company Website"])
+            }
+            jobs.append(job)
+        
+        return json.dumps(jobs, indent=2)
 
 class MockDatabase:
     """Mock database connection for development"""

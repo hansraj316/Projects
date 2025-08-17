@@ -118,7 +118,7 @@ def _show_upload_section():
                 
                 # Parse resume with AI
                 st.info("Parsing resume with AI...")
-                config = Config()
+                config = get_config()
                 parse_result = parse_resume_from_text(extracted_text, config)
                 
                 if not parse_result.get("success", False):
@@ -504,6 +504,127 @@ def _convert_parsed_data_to_display_format(parsed_data: Dict[str, Any], filename
         "parsing_status": "ai_parsed",
         "full_parsed_data": parsed_data  # Keep the full structured data for future use
     }
+
+
+def parse_resume_from_text(extracted_text: str, config) -> Dict[str, Any]:
+    """
+    Parse extracted text using AI to extract structured resume data
+    
+    Args:
+        extracted_text: Raw text extracted from resume file
+        config: Configuration object with AI settings
+        
+    Returns:
+        Dict with parsed resume data
+    """
+    try:
+        # Import OpenAI here to avoid circular imports
+        import openai
+        import json
+        
+        # Get OpenAI client
+        client = config.get_openai_client()
+        
+        # Create prompt for resume parsing
+        parsing_prompt = f"""
+        Parse the following resume text and extract structured information. Return a JSON object with the following structure:
+        
+        {{
+            "personal_info": {{
+                "name": "Full name",
+                "email": "Email address",
+                "phone": "Phone number",
+                "location": "Location/Address",
+                "linkedin": "LinkedIn URL",
+                "github": "GitHub URL"
+            }},
+            "professional_summary": "Professional summary or objective statement",
+            "skills": {{
+                "technical": ["list of technical skills"],
+                "soft_skills": ["list of soft skills"],
+                "tools": ["list of tools and technologies"]
+            }},
+            "experience": [
+                {{
+                    "company": "Company name",
+                    "position": "Job title",
+                    "start_date": "Start date",
+                    "end_date": "End date or 'Present'",
+                    "description": "Job description",
+                    "achievements": ["List of key achievements"]
+                }}
+            ],
+            "education": [
+                {{
+                    "institution": "School/University name",
+                    "degree": "Degree type and field",
+                    "graduation_date": "Graduation date",
+                    "gpa": "GPA if mentioned"
+                }}
+            ],
+            "certifications": [
+                {{
+                    "name": "Certification name",
+                    "issuer": "Issuing organization",
+                    "date": "Date obtained"
+                }}
+            ],
+            "projects": [
+                {{
+                    "name": "Project name",
+                    "description": "Project description",
+                    "technologies": ["Technologies used"],
+                    "link": "Project link if available"
+                }}
+            ]
+        }}
+        
+        Resume text to parse:
+        {extracted_text}
+        
+        Return only valid JSON, no additional text.
+        """
+        
+        # Make API call
+        response = client.chat.completions.create(
+            model=config.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a resume parsing expert. Extract structured information from resume text and return valid JSON only."},
+                {"role": "user", "content": parsing_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=2000
+        )
+        
+        # Parse response
+        response_text = response.choices[0].message.content.strip()
+        
+        # Clean up response to extract JSON
+        if response_text.startswith('```json'):
+            response_text = response_text[7:]
+        if response_text.endswith('```'):
+            response_text = response_text[:-3]
+        
+        parsed_data = json.loads(response_text)
+        
+        return {
+            "success": True,
+            "data": parsed_data,
+            "message": "Resume parsed successfully with AI"
+        }
+        
+    except json.JSONDecodeError as e:
+        return {
+            "success": False,
+            "error": f"Failed to parse AI response as JSON: {str(e)}",
+            "message": "AI parsing failed - using fallback structure"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"AI resume parsing failed: {str(e)}",
+            "message": "AI parsing failed - using fallback structure"
+        }
 
 
 if __name__ == "__main__":
