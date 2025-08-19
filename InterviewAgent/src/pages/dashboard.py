@@ -874,7 +874,7 @@ def create_status_card(title: str, status: str, status_type: str = "success"):
     """
 
 def create_futuristic_table_badge(status: str, status_type: str = "success"):
-    """Create animated status badges for table cells"""
+    """Create animated status badges for table cells - ShadCN inspired"""
     
     badge_configs = {
         "success": {"color": "var(--neon-accent)", "bg": "rgba(0, 255, 65, 0.1)", "icon": "✓"},
@@ -892,40 +892,345 @@ def create_futuristic_table_badge(status: str, status_type: str = "success"):
     icon = config['icon']
     
     return f"""
-    <div class="futuristic-badge" style="
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
+    <div class="shadcn-badge inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium" style="
         background: {bg};
         color: {color};
         border: 1px solid {color};
-        border-radius: 50px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
         backdrop-filter: blur(10px);
         -webkit-backdrop-filter: blur(10px);
         box-shadow: 0 2px 10px {color}33;
         transition: all 0.3s ease;
-        animation: badgePulse 2s ease-in-out infinite;
     ">
-        <span style="font-size: 1rem;">{icon}</span>
+        <span class="mr-1" style="font-size: 0.8rem;">{icon}</span>
         {status}
     </div>
+    """
+
+def create_professional_activity_table(activity_data, show_search=True):
+    """Create a clean, professional activity table using Streamlit native components"""
     
+    if not activity_data:
+        st.markdown("""
+        <div style="
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--glass-bg);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            margin: 2rem 0;
+        ">
+            <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.6;">📊</div>
+            <h3 style="color: var(--foreground); margin-bottom: 1rem;">No Activity Data</h3>
+            <p style="color: var(--foreground-muted); font-size: 1rem;">
+                Start searching for jobs to see your recent activity here!
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+    
+    # Add clean modern styling for the table
+    st.markdown("""
     <style>
-    .futuristic-badge:hover {{
-        transform: scale(1.1);
-        box-shadow: 0 4px 20px {color}66;
-    }}
+    /* Modern Professional Table Styling */
+    .stDataFrame {
+        background: transparent !important;
+        border: none !important;
+    }
     
-    @keyframes badgePulse {{
-        0%, 100% {{ box-shadow: 0 2px 10px {color}33; }}
-        50% {{ box-shadow: 0 4px 15px {color}66; }}
-    }}
+    .stDataFrame > div {
+        background: var(--glass-bg) !important;
+        border: 2px solid var(--glass-border) !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+        backdrop-filter: blur(10px) !important;
+        -webkit-backdrop-filter: blur(10px) !important;
+    }
+    
+    .stDataFrame table {
+        background: transparent !important;
+        color: var(--foreground) !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+    
+    .stDataFrame thead th {
+        background: linear-gradient(135deg, 
+            rgba(0, 212, 255, 0.1) 0%, 
+            rgba(255, 20, 147, 0.1) 50%,
+            rgba(0, 212, 255, 0.1) 100%) !important;
+        color: var(--foreground) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        font-size: 0.875rem !important;
+        padding: 1rem !important;
+        border: none !important;
+        border-bottom: 2px solid var(--glass-border) !important;
+    }
+    
+    .stDataFrame tbody td {
+        color: var(--foreground) !important;
+        padding: 1rem !important;
+        border: none !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stDataFrame tbody tr:hover td {
+        background: var(--background-glass) !important;
+        color: var(--neon-primary) !important;
+    }
+    
+    .stDataFrame tbody tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.02) !important;
+    }
+    
+    /* Status badges */
+    .status-completed {
+        background: linear-gradient(45deg, rgba(0, 255, 65, 0.2), rgba(0, 242, 254, 0.2)) !important;
+        color: #39ff14 !important;
+        padding: 0.25rem 0.75rem !important;
+        border-radius: 20px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        border: 1px solid #39ff14 !important;
+    }
+    
+    .time-cell {
+        font-family: 'JetBrains Mono', 'Courier New', monospace !important;
+        color: var(--neon-primary) !important;
+        font-weight: 500 !important;
+    }
+    
+    .query-cell {
+        font-style: italic !important;
+        color: var(--foreground) !important;
+    }
+    
+    .jobs-count {
+        font-weight: 700 !important;
+        color: var(--neon-accent) !important;
+        font-size: 1rem !important;
+    }
     </style>
+    """, unsafe_allow_html=True)
+    
+    # Create search/filter interface if requested
+    if show_search:
+        st.markdown("""
+        <div style="
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(255, 20, 147, 0.08));
+            backdrop-filter: blur(20px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--glass-border);
+        ">
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            search_query = st.text_input(
+                "",
+                placeholder="🔍 Search activities, queries, jobs...",
+                key="activity_search",
+                label_visibility="collapsed"
+            )
+        
+        with col2:
+            filter_type = st.selectbox(
+                "",
+                ["All Activities", "✅ Completed", "🔍 Job Searches", "📊 Recent"],
+                key="activity_filter",
+                label_visibility="collapsed"
+            )
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Process and display data
+    import pandas as pd
+    
+    # Create clean DataFrame
+    df_data = []
+    for item in activity_data:
+        # Format the data for clean display
+        formatted_item = {
+            "Time": item.get('time', 'Unknown'),
+            "Activity": item.get('activity', ''),
+            "Search Query": f"\"{item.get('query', '')}\"",
+            "Jobs Found": item.get('jobs_found', 0),
+            "Status": "✅ Completed"  # For now, all are completed
+        }
+        df_data.append(formatted_item)
+    
+    df = pd.DataFrame(df_data)
+    
+    # Display the table with custom configuration
+    st.dataframe(
+        df,
+        use_container_width=True,
+        height=400,
+        hide_index=True,
+        column_config={
+            "Time": st.column_config.TextColumn(
+                "Time",
+                help="When the activity occurred",
+                width="small"
+            ),
+            "Activity": st.column_config.TextColumn(
+                "Activity",
+                help="Type of activity performed",
+                width="medium"
+            ),
+            "Search Query": st.column_config.TextColumn(
+                "Search Query", 
+                help="The job search query used",
+                width="large"
+            ),
+            "Jobs Found": st.column_config.NumberColumn(
+                "Jobs Found",
+                help="Number of jobs discovered",
+                format="%d jobs",
+                width="small"
+            ),
+            "Status": st.column_config.TextColumn(
+                "Status",
+                help="Activity completion status",
+                width="small"
+            )
+        }
+    )
+    
+    # Add summary info
+    total_activities = len(activity_data)
+    total_jobs = sum(item.get('jobs_found', 0) for item in activity_data)
+    
+    st.markdown(f"""
+    <div style="
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, rgba(0, 212, 255, 0.05), rgba(255, 20, 147, 0.05));
+        border-radius: 12px;
+        margin-top: 1rem;
+        border: 1px solid var(--glass-border);
+        backdrop-filter: blur(10px);
+    ">
+        <span style="color: var(--foreground-muted); font-size: 0.875rem;">
+            Showing {min(8, total_activities)} of {total_activities} activities • {total_jobs} total jobs found
+        </span>
+        <div style="display: flex; gap: 0.5rem;">
+            <button style="
+                padding: 0.5rem 1rem;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                color: var(--foreground);
+                font-size: 0.875rem;
+                cursor: not-allowed;
+                opacity: 0.6;
+            " disabled>‹ Previous</button>
+            <button style="
+                padding: 0.5rem 1rem;
+                background: var(--neon-primary);
+                border: 1px solid var(--neon-primary);
+                border-radius: 8px;
+                color: #000;
+                font-size: 0.875rem;
+                font-weight: 600;
+            ">1</button>
+            <button style="
+                padding: 0.5rem 1rem;
+                background: var(--glass-bg);
+                border: 1px solid var(--glass-border);
+                border-radius: 8px;
+                color: var(--foreground);
+                font-size: 0.875rem;
+                cursor: not-allowed;
+                opacity: 0.6;
+            " disabled>Next ›</button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def create_shadcn_toolbar():
+    """Create ShadCN-inspired table toolbar with filters and search"""
+    return """
+    <div class="flex items-center justify-between">
+        <div class="flex flex-1 items-center space-x-2">
+            <input 
+                class="flex h-8 w-[150px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 lg:w-[250px]"
+                placeholder="Search activities..."
+                type="text"
+            />
+            <div class="flex items-center space-x-2">
+                <button class="shadcn-btn inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-xs">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z"/>
+                    </svg>
+                    Filter
+                </button>
+                <button class="shadcn-btn inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 px-3 text-xs">
+                    <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    View
+                </button>
+            </div>
+        </div>
+    </div>
+    """
+
+def create_shadcn_pagination():
+    """Create ShadCN-inspired pagination controls"""
+    return """
+    <div class="flex items-center justify-between px-2">
+        <div class="flex-1 text-sm text-muted-foreground">
+            0 of 0 row(s) selected.
+        </div>
+        <div class="flex items-center space-x-6 lg:space-x-8">
+            <div class="flex items-center space-x-2">
+                <p class="text-sm font-medium">Rows per page</p>
+                <select class="flex h-8 w-[70px] items-center justify-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                    <option value="40">40</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div class="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page 1 of 1
+            </div>
+            <div class="flex items-center space-x-2">
+                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                    <span class="sr-only">Go to first page</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                    <span class="sr-only">Go to previous page</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                    <span class="sr-only">Go to next page</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <button class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0">
+                    <span class="sr-only">Go to last page</span>
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
     """
 
 def show_dashboard():
@@ -1069,15 +1374,15 @@ def show_dashboard():
         avg_jobs = stats['jobs_discovered'] / max(stats['job_searches'], 1)
         st.markdown(create_metric_card("Avg Jobs/Search", f"{avg_jobs:.1f}", None, "📈"), unsafe_allow_html=True)
     
-    # Recent activity section with modern styling
+    # Recent activity section with ultra-modern ShadCN table
     st.markdown('<div class="section-title">📈 Recent Activity</div>', unsafe_allow_html=True)
     
-    # Show real job search activity
+    # Create spectacular ShadCN data table for activity
     try:
         if job_searches:
-            # Create activity timeline from job searches
+            # Prepare activity data for the spectacular table
             activity_data = []
-            for search in job_searches[:15]:  # Show more searches now that we have full width
+            for search in job_searches[:15]:  # Show 15 recent searches
                 try:
                     search_time = search.created_at
                     if search_time:
@@ -1088,76 +1393,66 @@ def show_dashboard():
                         time_str = 'Unknown'
                     
                     activity_data.append({
-                        'Time': time_str,
-                        'Activity': '🔍 Job Search',
-                        'Query': search.search_query,  # Full query now since we have more space
-                        'Jobs Found': search.jobs_found,
-                        'Status': '✅ Completed'
+                        'time': time_str,
+                        'activity': '🔍 Job Search',
+                        'query': search.search_query,
+                        'jobs_found': search.jobs_found or 0,
+                        'status': 'Completed'
                     })
                 except Exception:
                     continue
             
             if activity_data:
-                # Enhance the activity data with futuristic badges
-                for item in activity_data:
-                    if item['Status'] == '✅ Completed':
-                        item['Status'] = create_futuristic_table_badge('Completed', 'completed')
-                    elif 'Error' in item['Status']:
-                        item['Status'] = create_futuristic_table_badge('Error', 'error')
-                    elif 'Pending' in item['Status']:
-                        item['Status'] = create_futuristic_table_badge('Pending', 'pending')
+                # Display the professional activity table
+                create_professional_activity_table(activity_data, show_search=True)
                 
-                activity_df = pd.DataFrame(activity_data)
-                
-                # Create enhanced table with custom styling
-                st.markdown('<div class="futuristic-table-container">', unsafe_allow_html=True)
-                st.dataframe(
-                    activity_df, 
-                    use_container_width=True, 
-                    height=450,
-                    hide_index=True,
-                    column_config={
-                        "Status": st.column_config.TextColumn(
-                            "Status",
-                            help="Job search status",
-                            width="medium"
-                        ),
-                        "Activity": st.column_config.TextColumn(
-                            "Activity",
-                            help="Type of activity performed"
-                        ),
-                        "Query": st.column_config.TextColumn(
-                            "Search Query",
-                            help="The job search query used"
-                        ),
-                        "Jobs Found": st.column_config.NumberColumn(
-                            "Jobs Found",
-                            help="Number of jobs discovered",
-                            format="%d"
-                        )
-                    }
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
+                # Add quick stats about recent activity with neon styling
+                recent_count = len([s for s in job_searches if s.created_at and s.created_at.date() >= (datetime.now() - timedelta(days=7)).date()])
+                if recent_count > 0:
+                    st.markdown(f"""
+                    <div style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        padding: 0.75rem 1.5rem;
+                        background: linear-gradient(45deg, rgba(0, 255, 65, 0.1), rgba(0, 242, 254, 0.1));
+                        border: 1px solid var(--neon-accent);
+                        border-radius: 50px;
+                        color: var(--neon-accent);
+                        font-weight: 600;
+                        font-size: 0.875rem;
+                        box-shadow: 0 4px 15px rgba(0, 255, 65, 0.2);
+                        margin-top: 1rem;
+                        backdrop-filter: blur(10px);
+                    ">
+                        🎉 {recent_count} searches in the last 7 days!
+                    </div>
+                    """, unsafe_allow_html=True)
             else:
-                st.markdown("""
-                <div class="shadcn-card" style="text-align: center; padding: 3rem;">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
-                    <h3 style="color: var(--foreground); margin-bottom: 1rem;">No Activity Found</h3>
-                    <p style="color: var(--foreground-muted);">Start by searching for jobs to see your activity here!</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
+                # No activity data available - show empty state
+                create_professional_activity_table([], show_search=False)
+                
         else:
-            st.info("No recent activity found. Start by searching for jobs!")
-            
-        # Add quick stats about recent activity
-        if job_searches:
-            recent_count = len([s for s in job_searches if s.created_at and s.created_at.date() >= (datetime.now() - timedelta(days=7)).date()])
-            if recent_count > 0:
-                st.success(f"🎉 {recent_count} searches in the last 7 days!")
+            # No job searches found - show empty state
+            create_professional_activity_table([], show_search=False)
             
     except Exception as e:
-        st.error(f"Failed to load recent activity: {str(e)}")
+        st.markdown(f"""
+        <div style="
+            background: var(--glass-bg);
+            border: 2px solid var(--neon-danger);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            text-align: center;
+            color: var(--neon-danger);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(255, 7, 58, 0.2);
+        ">
+            <div style="font-size: 2rem; margin-bottom: 1rem;">⚠️</div>
+            <h3 style="margin-bottom: 1rem;">Failed to Load Activity Table</h3>
+            <p style="color: var(--foreground-muted); font-size: 0.875rem;">{str(e)}</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Charts section
     st.markdown("---")
