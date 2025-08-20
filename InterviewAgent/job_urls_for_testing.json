@@ -1,0 +1,56 @@
+[
+  {
+    "url": "https://techcorp.com/careers/job/6040",
+    "title": "Data Scientist",
+    "company": "TechCorp",
+    "search_query": "Data Scientist Entry Level jobs in New York site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://innovatelabs.com/careers/job/2097",
+    "title": "Data Scientist",
+    "company": "InnovateLabs",
+    "search_query": "Data Scientist Entry Level jobs in New York site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://devsolutions.com/careers/job/5256",
+    "title": "Data Scientist",
+    "company": "DevSolutions",
+    "search_query": "Data Scientist Entry Level jobs in New York site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://techcorp.com/careers/job/1319",
+    "title": "Python Developer",
+    "company": "TechCorp",
+    "search_query": "Python Developer Senior jobs remote site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://innovatelabs.com/careers/job/5455",
+    "title": "Python Developer",
+    "company": "InnovateLabs",
+    "search_query": "Python Developer Senior jobs remote site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://devsolutions.com/careers/job/6473",
+    "title": "Python Developer",
+    "company": "DevSolutions",
+    "search_query": "Python Developer Senior jobs remote site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://techcorp.com/careers/job/8177",
+    "title": "Software Engineer",
+    "company": "TechCorp",
+    "search_query": "Software Engineer Mid Level jobs in San Francisco site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://innovatelabs.com/careers/job/6508",
+    "title": "Software Engineer",
+    "company": "InnovateLabs",
+    "search_query": "Software Engineer Mid Level jobs in San Francisco site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  },
+  {
+    "url": "https://devsolutions.com/careers/job/4019",
+    "title": "Software Engineer",
+    "company": "DevSolutions",
+    "search_query": "Software Engineer Mid Level jobs in San Francisco site:linkedin.com OR site:indeed.com OR site:glassdoor.com OR site:lever.co OR site:greenhouse.io"
+  }
+]

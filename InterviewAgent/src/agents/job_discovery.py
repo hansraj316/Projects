@@ -93,14 +93,14 @@ class JobDiscoveryAgent(BaseAgent):
         
         # Use OpenAI Responses API with web search
         try:
-            # Use the get_response method from BaseAgent which handles the Responses API properly
-            search_input = f"""Search for job openings and extract detailed information. Search query: {search_query}
+            # Use the proper Responses API directly
+            search_input = f"""Please search the web for job openings using this query: {search_query}
 
-Extract the following information for each job found:
-- job_title: Exact job title from posting
+After finding job postings, extract detailed information and format it as a JSON array. For each job found, include:
+- job_title: Exact job title from the posting
 - company: Company name
-- location: Job location (city, state/country)
-- job_url: Direct URL to apply or view the job posting
+- location: Job location (city, state/country) 
+- job_url: Direct URL to apply or view the job posting (must be a real, accessible URL)
 - salary_range: Salary range if mentioned
 - experience_level: Required experience level
 - remote_type: remote/hybrid/onsite
@@ -108,13 +108,58 @@ Extract the following information for each job found:
 - posted_date: When the job was posted
 - source: Which job board (LinkedIn, Indeed, etc.)
 
-Return the results as a JSON array of job objects. Only include jobs with valid application URLs."""
+IMPORTANT: Only include jobs with real, accessible URLs from actual job boards like LinkedIn, Indeed, Glassdoor, etc. Do not create fictional companies or URLs.
 
-            # Add web search tool and make the call
-            tools = [self.add_web_search_tool()]
-            search_results = self.get_response(search_input, tools=tools, model="gpt-4o")
+Return ONLY a valid JSON array in this format:
+[
+  {{
+    "job_title": "Software Engineer",
+    "company": "Real Company Name",
+    "location": "San Francisco, CA",
+    "job_url": "https://linkedin.com/jobs/view/123456789",
+    "salary_range": "$120k - $180k",
+    "experience_level": "Mid Level",
+    "remote_type": "hybrid",
+    "requirements": "React, Node.js, AWS",
+    "posted_date": "2 days ago",
+    "source": "LinkedIn"
+  }}
+]"""
+
+            # Create proper response with web search tool
+            response = self._openai_client.responses.create(
+                model="gpt-4o",
+                input=search_input,
+                tools=[{"type": "web_search"}]
+            )
             
-            # Parse and validate the JSON response
+            # Extract response text and web search results properly from Responses API
+            search_results = ""
+            web_search_results = []
+            
+            # Process all output items
+            for output_item in response.output:
+                # Check for web search results
+                if hasattr(output_item, 'action') and hasattr(output_item.action, 'query'):
+                    # This is a web search action
+                    web_search_results.append({
+                        'query': output_item.action.query,
+                        'status': output_item.status,
+                        'type': 'web_search'
+                    })
+                # Check for regular message content
+                elif hasattr(output_item, 'content'):
+                    for content_item in output_item.content:
+                        if hasattr(content_item, 'text'):
+                            search_results += content_item.text + "\n"
+            
+            self._logger.info(f"Web search performed: {len(web_search_results)} searches")
+            self._logger.info(f"Response text length: {len(search_results)}")
+            
+            if not search_results and web_search_results:
+                # If we have web search but no text response, request the results
+                search_results = "Web search was performed but no structured results returned."
+            
             jobs_data = self._parse_web_search_results(search_results)
             
             # If no jobs found or parsing failed, try to extract from text
