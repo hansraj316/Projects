@@ -310,16 +310,16 @@ def validate_model_input(data: Dict[str, Any], model_class: Type[T]) -> T:
         validation_result = validator.validate_and_sanitize(data, "input_data")
         
         if not validation_result.is_valid:
-            raise ValidationError(f"Security validation failed: {'; '.join(validation_result.errors)}")
+            raise ValidationError("input_data", data, f"Security validation failed: {'; '.join(validation_result.errors)}")
         
         # Then validate with Pydantic model
         return model_class(**validation_result.sanitized_data)
         
     except ValueError as e:
-        raise ValidationError(f"Model validation failed: {str(e)}") from e
+        raise ValidationError("model_validation", data, f"Model validation failed: {str(e)}") from e
     except Exception as e:
         logger.error("Unexpected validation error", extra={"error": str(e), "model": model_class.__name__})
-        raise ValidationError("Input validation failed due to internal error") from e
+        raise ValidationError("validation_internal", data, "Input validation failed due to internal error") from e
 
 
 def sanitize_error_message(error: Exception, context: str = "") -> str:

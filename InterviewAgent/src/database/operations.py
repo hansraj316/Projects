@@ -685,7 +685,7 @@ class DatabaseOperations:
         user_id_validation = validator.validate_and_sanitize(user_id, "user_id")
         
         if not user_id_validation.is_valid:
-            raise ValidationError(f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
+            raise ValidationError("user_id", user_id, f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
         
         sanitized_user_id = user_id_validation.sanitized_data
         
@@ -755,11 +755,11 @@ class DatabaseOperations:
         
         user_id_validation = validator.validate_and_sanitize(user_id, "user_id")
         if not user_id_validation.is_valid:
-            raise ValidationError(f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
+            raise ValidationError("user_id", user_id, f"Invalid user ID: {'; '.join(user_id_validation.errors)}")
         
         profile_validation = validator.validate_and_sanitize(profile_data, "profile_data")
         if not profile_validation.is_valid:
-            raise ValidationError(f"Invalid profile data: {'; '.join(profile_validation.errors)}")
+            raise ValidationError("profile_data", profile_data, f"Invalid profile data: {'; '.join(profile_validation.errors)}")
         
         sanitized_user_id = user_id_validation.sanitized_data
         sanitized_profile = profile_validation.sanitized_data

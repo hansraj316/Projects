@@ -116,7 +116,7 @@ class SimpleAutomationController(BaseAgent):
         try:
             # Validate user_id
             if not user_id or not isinstance(user_id, str) or len(user_id.strip()) == 0:
-                raise ValidationError("Invalid user ID provided")
+                raise ValidationError("user_id", user_id, "Invalid user ID provided")
             
             # Validate job search criteria
             validated_criteria = validate_model_input(job_search_criteria, JobSearchCriteriaValidator)
@@ -129,7 +129,7 @@ class SimpleAutomationController(BaseAgent):
                 validator = get_global_validator()
                 jobs_validation = validator.validate_and_sanitize(saved_jobs, "saved_jobs")
                 if not jobs_validation.is_valid:
-                    raise ValidationError(f"Invalid saved jobs data: {'; '.join(jobs_validation.errors)}")
+                    raise ValidationError("saved_jobs", saved_jobs, f"Invalid saved jobs data: {'; '.join(jobs_validation.errors)}")
                 saved_jobs = jobs_validation.sanitized_data
             
             self.logger.info(f"Starting validated automation workflow {workflow_id}")
