@@ -8,12 +8,15 @@ This directory contains various software projects and applications, ranging from
 
 #### **InterviewAgent**
 An intelligent job search automation platform that streamlines the job application process using AI agents.
+
 - **Features**: Job discovery, resume optimization, cover letter generation, application submission
 - **Tech Stack**: Python, Streamlit, Supabase, Playwright
 - **Status**: Production-ready
 
 #### **CoachAI**
+
 A comprehensive AI coaching platform with both web and iOS applications.
+
 - **Features**: Learning plans, progress tracking, subscription management
 - **Tech Stack**: Python, Swift (iOS), Kivy (Mobile), Flask (Web)
 - **Platforms**: Web, Mobile, iOS
