@@ -1,0 +1,72 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 1] User submitted in Projects: $CLAUDE_HOOK_INPUT_USER_PROMPT\""
+          },
+          {
+            "type": "command", 
+            "command": "echo \"[PROJECT Hook 2] Echoing same prompt in Projects: $CLAUDE_HOOK_INPUT_USER_PROMPT\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 1] Tool completed in Projects directory - PostToolUse event triggered\""
+          },
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 2] Same PostToolUse event in Projects - collecting local analytics\""
+          },
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Task completed in Projects!\" with title \"Claude Code Project\" sound name \"Hero\"'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 1] Session started in Projects directory - initializing project environment\""
+          },
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 2] Same SessionStart event in Projects - welcome to Projects workspace\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 1] About to use tool in Projects directory - PreToolUse validation\""
+          },
+          {
+            "type": "command",
+            "command": "echo \"[PROJECT Hook 2] Same PreToolUse event in Projects - security check passed\""
+          },
+          {
+            "type": "command",
+            "command": "osascript -e 'display notification \"Claude Code is working in Projects...\" with title \"Claude Code Project\" sound name \"Glass\"'"
+          }
+        ]
+      }
+    ]
+  }
+}
