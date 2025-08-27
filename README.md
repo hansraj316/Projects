@@ -84,7 +84,6 @@ Projects/
 Each project may have its own contributing guidelines. Please refer to the individual project documentation for specific development workflows and standards.
 
 ## Notes
-
 - Some projects contain sensitive configuration files (`.env`, `secrets.env`) that are not included in version control
 - Virtual environments (`venv/`) are used across projects for dependency isolation
 - Log files and temporary data are typically stored in dedicated directories within each project
