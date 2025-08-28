@@ -1,6 +1,6 @@
 # InterviewAgent 🤖
 
-**AI-Powered Job Application Automation System**
+** AI-Powered Job Application Automation System**
 
 An intelligent automation system that helps job candidates streamline their application process using AI agents for resume optimization, cover letter generation, and automated job application submission.
 
