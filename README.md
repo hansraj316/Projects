@@ -79,7 +79,7 @@ Projects/
 └── windsurf-demo/          # Development demo project
 ```
 
-## Contributing
+## Contributing not updates today
 
 Each project may have its own contributing guidelines. Please refer to the individual project documentation for specific development workflows and standards.
 
