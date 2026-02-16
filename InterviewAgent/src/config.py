@@ -77,21 +77,37 @@ class AppConfig:
         
         # Load secure configuration
         secure_config = security_config.get_secure_config()
-        
-        # Validate required configuration
+
+        environment = os.getenv('ENVIRONMENT', 'development').lower()
+
+        # In development/test, allow mock defaults so the app/tests can run end-to-end
         supabase_url = os.getenv('SUPABASE_URL')
         if not supabase_url:
-            raise ConfigurationError("SUPABASE_URL environment variable is required")
+            if environment == 'production':
+                raise ConfigurationError("SUPABASE_URL environment variable is required")
+            supabase_url = 'test-url'
+
+        supabase_key = secure_config.get('supabase_key') or os.getenv('SUPABASE_KEY')
+        if not supabase_key:
+            if environment == 'production':
+                raise ConfigurationError("SUPABASE_KEY environment variable is required")
+            supabase_key = 'test-key'
+
+        openai_api_key = secure_config.get('openai_api_key') or os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            if environment == 'production':
+                raise ConfigurationError("OPENAI_API_KEY environment variable is required")
+            openai_api_key = 'sk-dev-placeholder'
         
         # Create configuration with secure credentials
         return cls(
             database=DatabaseConfig(
                 url=supabase_url,
-                key=secure_config.get('supabase_key', ''),
+                key=supabase_key,
                 service_role_key=os.getenv('SUPABASE_SERVICE_ROLE_KEY')
             ),
             openai=OpenAIConfig(
-                api_key=secure_config.get('openai_api_key', ''),
+                api_key=openai_api_key,
                 model=os.getenv('OPENAI_MODEL', 'gpt-4o-mini'),
                 temperature=cls._safe_float(os.getenv('OPENAI_TEMPERATURE', '0.7')),
                 max_tokens=cls._safe_int(os.getenv('OPENAI_MAX_TOKENS', '4000'))
