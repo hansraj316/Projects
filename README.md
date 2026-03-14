@@ -4,7 +4,7 @@ This directory contains various software projects and applications, ranging from
 
 ## Projects Overview
 
-### 🤖 AI & Automation Projects
+### 🤖 AI & Automation Projects.
 
 #### **InterviewAgent**
 An intelligent job search automation platform that streamlines the job application process using AI agents.
