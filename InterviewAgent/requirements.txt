@@ -19,6 +19,7 @@ email-validator>=2.0.0
 # Data Processing
 pandas>=2.0.0
 requests>=2.31.0
+plotly>=6.0.0
 
 # Development and Testing
 pytest>=7.4.0

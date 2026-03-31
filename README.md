@@ -4,7 +4,7 @@ This directory contains various software projects and applications, ranging from
 
 ## Projects Overview
 
-### 🤖 AI & Automation Projects
+### 🤖 AI & Automation Projects.
 
 #### **InterviewAgent**
 An intelligent job search automation platform that streamlines the job application process using AI agents.
@@ -79,7 +79,7 @@ Projects/
 └── windsurf-demo/          # Development demo project
 ```
 
-## Contributing
+## Contributing not updates today
 
 Each project may have its own contributing guidelines. Please refer to the individual project documentation for specific development workflows and standards.
 
