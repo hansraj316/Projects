@@ -38,6 +38,16 @@ Multi-agent pipeline for job applications — resume optimization, cover letters
 - **Tech Stack**: Python, Playwright, Supabase, Claude, MCP
 - **Status**: Production
 
+#### **[EdgeShield](https://github.com/hansraj316/enterprise-edge-security-hub)**
+Enterprise edge security platform for Indian mid-market — real-time threat detection, AI anomaly detection, edge computing security dashboard.
+- **Tech Stack**: Next.js 15, TypeScript, Tailwind CSS, Framer Motion
+- **Status**: Active
+
+#### **[PhishShield Drill Engine](https://github.com/hansraj316/phishshield-drill-engine)**
+AI-powered phishing simulation and instant coaching MVP for SMB teams.
+- **Tech Stack**: Node.js, Express
+- **Status**: MVP
+
 ---
 
 ## 🧪 Experiments & Learning
@@ -69,6 +79,8 @@ Projects/
 ├── PMChat/                  # AI PM assistant
 ├── OllamaBar/               # macOS token tracker
 ├── InterviewAgent/          # Job automation (500+/day)
+├── enterprise-edge-security-hub/ # EdgeShield security platform
+├── phishshield-drill-engine/ # Phishing simulation MVP
 ├── ai_agent_project/        # Agent framework experiments
 ├── ClaudeCode/              # Claude dev tools
 ├── Azure DevOps MCP/        # Azure integration
