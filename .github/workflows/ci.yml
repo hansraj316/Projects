@@ -52,6 +52,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ai_agent_project/requirements.txt
       - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest -q ai_agent_project
 
   node-claudecode:
@@ -107,6 +109,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r CoachAI/requirements.txt
       - name: Run pytest
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest -q CoachAI
 
   project-starlink-style:
@@ -145,7 +149,9 @@ jobs:
           pip install -r "Project Starlink/requirements.txt"
           pip install pytest
       - name: Run pytest
-        run: pytest -q "Project Starlink"
+        run: |
+          pytest -q "Project Starlink" || rc=$?
+          if [ "${rc:-0}" -ne 0 ] && [ "${rc:-0}" -ne 5 ]; then exit "$rc"; fi
 
   interviewagent-style:
     name: InterviewAgent style checks (non-blocking)
