@@ -1,7 +1,8 @@
-from typing import Dict, List, Optional
-import requests
 import json
+from typing import Dict, List, Optional
 from urllib.parse import urljoin
+
+import requests
 
 
 class APIConnector:

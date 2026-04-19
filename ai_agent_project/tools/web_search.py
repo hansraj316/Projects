@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
-import requests
 from urllib.parse import quote_plus
+
+import requests
 
 
 class WebSearch:

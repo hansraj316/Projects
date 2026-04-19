@@ -1,11 +1,12 @@
-import unittest
-from unittest.mock import Mock, patch
-import tempfile
 import os
+import tempfile
+import unittest
 from pathlib import Path
-from ..tools.web_search import WebSearch
-from ..tools.file_manager import FileManager
+from unittest.mock import Mock, patch
+
 from ..tools.api_connector import APIConnector
+from ..tools.file_manager import FileManager
+from ..tools.web_search import WebSearch
 
 
 class TestWebSearch(unittest.TestCase):

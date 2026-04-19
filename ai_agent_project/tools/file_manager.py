@@ -1,8 +1,9 @@
-from typing import Dict, List, Optional, BinaryIO
-import os
 import json
-import yaml
+import os
 from pathlib import Path
+from typing import BinaryIO, Dict, List, Optional
+
+import yaml
 
 
 class FileManager:

@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import Mock, patch
-from ..agents.planner import Planner
+
 from ..agents.executor import Executor
 from ..agents.memory import Memory
+from ..agents.planner import Planner
 
 
 class TestPlanner(unittest.TestCase):
