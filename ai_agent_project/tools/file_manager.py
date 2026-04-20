@@ -1,7 +1,7 @@
 import json
 import os
 from pathlib import Path
-from typing import BinaryIO, Dict, List, Optional
+from typing import Dict, Optional
 
 import yaml
 

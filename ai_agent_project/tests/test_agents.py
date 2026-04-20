@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from ..agents.executor import Executor
 from ..agents.memory import Memory
