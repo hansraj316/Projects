@@ -9,7 +9,7 @@ This repository contains multiple projects. Security updates are actively mainta
 | InterviewAgent | :white_check_mark: Active | 2025 |
 | CoachAI | :white_check_mark: Active | 2025 |
 | ai_agent_project | :white_check_mark: Active | 2025 |
-| Project Starlink | :construction: Development | 2025 |
+| project-starlink | :construction: Development | 2025 |
 | Azure DevOps MCP | :white_check_mark: Active | 2025 |
 | Other projects | :warning: Limited support | - |
 

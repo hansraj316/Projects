@@ -12,7 +12,7 @@ assignees: ''
 - [ ] InterviewAgent
 - [ ] CoachAI
 - [ ] ai_agent_project
-- [ ] Project Starlink
+- [ ] project-starlink
 - [ ] Azure DevOps MCP
 - [ ] WikiRevamp
 - [ ] ClaudeCode

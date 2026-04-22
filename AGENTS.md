@@ -1,8 +1,8 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Root contains multiple projects: `InterviewAgent/`, `CoachAI/`, `ai_agent_project/`, `Project Starlink/`, `WikiRevamp/`, `ClaudeCode/`, `Azure DevOps MCP/`, `windsurf-demo/`.
-- Python sources live either under `src/` (e.g., `CoachAI/src/`, `InterviewAgent/src/`) or the project root (e.g., `Project Starlink/app.py`).
+- Root contains multiple projects: `InterviewAgent/`, `CoachAI/`, `ai_agent_project/`, `project-starlink/`, `WikiRevamp/`, `ClaudeCode/`, `Azure DevOps MCP/`, `windsurf-demo/`.
+- Python sources live either under `src/` (e.g., `CoachAI/src/`, `InterviewAgent/src/`) or the project root (e.g., `project-starlink/app.py`).
 - Tests: `ai_agent_project/tests/` (pytest). Add new tests alongside modules or under `<project>/tests/>`.
 - Config/assets: `.env` files per project, YAML under `ai_agent_project/configs/` and `ai_agent_project/workflows/`.
 
@@ -12,7 +12,7 @@
   - `pip install -r <project>/requirements.txt`
 - Run tests (pytest): `pytest -q` or `pytest --cov` in the target project.
 - Run CoachAI (FastAPI): `python -m uvicorn CoachAI.src.main:app --reload`.
-- Run Project Starlink (Flask): `python "Project Starlink/app.py"`.
+- Run project-starlink (Flask): `python "project-starlink/app.py"`.
 - Node (ClaudeCode): `npm install && npm test` (no tests configured by default).
 
 ## Coding Style & Naming Conventions
