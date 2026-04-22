@@ -65,6 +65,26 @@ except Exception as e:
     logger.addHandler(logging.NullHandler())
     print(f"Warning: Could not configure logging: {e}")
 
+FUNNEL_LOG_PATH = os.path.join("logs", "funnel_events.jsonl")
+
+
+def track_funnel_event(event: str, **props: Any) -> None:
+    """Best-effort server-side funnel event logging."""
+    try:
+        os.makedirs("logs", exist_ok=True)
+        payload = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": event,
+            "email": st.session_state.get("user_email"),
+            "customer_id": st.session_state.get("customer_id"),
+            "session_id": st.session_state.get("checkout_session_id"),
+            "props": props,
+        }
+        with open(FUNNEL_LOG_PATH, "a") as f:
+            f.write(json.dumps(payload) + "\n")
+    except Exception as e:
+        logger.warning(f"Failed to track funnel event {event}: {e}")
+
 # Apply modern, clean UI styling with dark mode
 st.markdown("""
 <style>
@@ -669,8 +689,13 @@ async def handle_subscription_upgrade():
             
             if st.button("Continue to Payment"):
                 if email:
+                    email = email.strip().lower()
+                    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+                        st.warning("Please enter a valid email address.")
+                        return
                     # Store email and continue
                     st.session_state.user_email = email
+                    track_funnel_event("checkout_intent_captured")
                     # Don't use st.rerun() which causes problems with async functions
                     # Instead, set a flag to continue the function
                     st.session_state.continue_payment = True
@@ -728,67 +753,86 @@ async def handle_subscription_upgrade():
                 import stripe
                 stripe.api_key = os.getenv('STRIPE_SECRET_KEY', '')
                 print(f"Creating checkout session with API key: {stripe.api_key[:5]}...")
+
+                # Reuse open checkout session when possible to reduce retry friction
+                existing_session_id = st.session_state.get("checkout_session_id")
+                if existing_session_id:
+                    try:
+                        existing_session = stripe.checkout.Session.retrieve(existing_session_id)
+                        if getattr(existing_session, "status", "") == "open" and getattr(existing_session, "url", None):
+                            payment_link = existing_session.url
+                            st.session_state.payment_link = payment_link
+                            track_funnel_event("checkout_session_reused")
+                        else:
+                            payment_link = None
+                    except Exception:
+                        payment_link = None
+                else:
+                    payment_link = None
                 
-                # First try to find an existing price
-                prices = stripe.Price.list(
-                    active=True,
-                    limit=10,
-                    expand=["data.product"]
-                )
-                
-                price_id = None
-                for price in prices.data:
-                    if hasattr(price, 'product') and price.product and hasattr(price.product, 'name'):
-                        if price.product.name == "Premium Subscription":
-                            price_id = price.id
-                            print(f"Found existing price: {price_id}")
-                            break
-                
-                # If no price found, create a new one
-                if not price_id:
-                    print("Creating new product and price...")
-                    # Create product
-                    product = stripe.Product.create(
-                        name="Premium Subscription",
-                        description="Access to premium features"
+                if not payment_link:
+                    # First try to find an existing price
+                    prices = stripe.Price.list(
+                        active=True,
+                        limit=10,
+                        expand=["data.product"]
                     )
-                    
-                    # Create price
-                    price = stripe.Price.create(
-                        product=product.id,
-                        unit_amount=999,  # $9.99
-                        currency="usd",
-                        recurring={"interval": "month"}
+
+                    price_id = None
+                    for price in prices.data:
+                        if hasattr(price, 'product') and price.product and hasattr(price.product, 'name'):
+                            if price.product.name == "Premium Subscription":
+                                price_id = price.id
+                                print(f"Found existing price: {price_id}")
+                                break
+
+                    # If no price found, create a new one
+                    if not price_id:
+                        print("Creating new product and price...")
+                        # Create product
+                        product = stripe.Product.create(
+                            name="Premium Subscription",
+                            description="Access to premium features"
+                        )
+
+                        # Create price
+                        price = stripe.Price.create(
+                            product=product.id,
+                            unit_amount=999,  # $9.99
+                            currency="usd",
+                            recurring={"interval": "month"}
+                        )
+
+                        price_id = price.id
+                        print(f"Created new price: {price_id}")
+
+                    # Add customer ID if we have one
+                    if st.session_state.customer_id:
+                        print(f"Added customer {st.session_state.customer_id} to checkout data")
+
+                    # Create checkout session
+                    print(f"Creating checkout session with data: {{success_url: '{success_url}', cancel_url: '{cancel_url}', mode: 'subscription', line_items: [{{'price': '{price_id}', 'quantity': 1}}], customer: '{st.session_state.customer_id}'}}")
+
+                    checkout_session = stripe.checkout.Session.create(
+                        success_url=success_url,
+                        cancel_url=cancel_url,
+                        mode="subscription",
+                        customer=st.session_state.customer_id,
+                        line_items=[
+                            {
+                                "price": price_id,
+                                "quantity": 1
+                            }
+                        ]
                     )
-                    
-                    price_id = price.id
-                    print(f"Created new price: {price_id}")
-                
-                # Add customer ID if we have one
-                if st.session_state.customer_id:
-                    print(f"Added customer {st.session_state.customer_id} to checkout data")
-                
-                # Create checkout session
-                print(f"Creating checkout session with data: {{success_url: '{success_url}', cancel_url: '{cancel_url}', mode: 'subscription', line_items: [{{'price': '{price_id}', 'quantity': 1}}], customer: '{st.session_state.customer_id}'}}")
-                
-                checkout_session = stripe.checkout.Session.create(
-                    success_url=success_url,
-                    cancel_url=cancel_url,
-                    mode="subscription",
-                    customer=st.session_state.customer_id,
-                    line_items=[
-                        {
-                            "price": price_id,
-                            "quantity": 1
-                        }
-                    ]
-                )
-                
-                payment_link = checkout_session.url
-                print(f"Checkout session created with ID: {checkout_session.id}")
-                print(f"Payment URL: {payment_link}")
-                
-                st.session_state.payment_link = payment_link
+
+                    payment_link = checkout_session.url
+                    print(f"Checkout session created with ID: {checkout_session.id}")
+                    print(f"Payment URL: {payment_link}")
+
+                    st.session_state.payment_link = payment_link
+                    st.session_state.checkout_session_id = checkout_session.id
+                    track_funnel_event("checkout_session_created")
             
             # Clear any previous UI elements with an empty container
             with st.empty():
@@ -825,6 +869,7 @@ async def handle_subscription_upgrade():
             </script>
             """
             st.components.v1.html(js_code, height=0)
+            track_funnel_event("checkout_redirect_opened")
             
             st.info("A new tab should open automatically to complete your payment. If it doesn't, please click the button above.")
             
@@ -868,6 +913,7 @@ def show_success_page(session_id: str):
 
 def show_cancel_page():
     """Show the cancellation page."""
+    track_funnel_event("checkout_cancel_viewed")
     # Display custom header with gradient background
     st.markdown("""
     <style>
@@ -945,6 +991,7 @@ def show_cancel_page():
             st.rerun()
     with col2:
         if st.button("Try Again", type="primary", use_container_width=True):
+            track_funnel_event("checkout_retry_clicked")
             # Use the existing event loop patched by nest_asyncio
             loop = asyncio.get_event_loop()
             loop.run_until_complete(handle_subscription_upgrade())
@@ -1276,6 +1323,7 @@ async def generate_plan():
 def handle_success_route():
     """Handle the success route after payment completion."""
     try:
+        track_funnel_event("checkout_success_viewed")
         # Set the user's subscription to premium
         st.session_state["subscription_tier"] = SubscriptionTier.PREMIUM
         st.session_state["has_premium"] = True
