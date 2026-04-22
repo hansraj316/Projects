@@ -96,3 +96,8 @@ Each project contains its own README with setup instructions. Most Python projec
 - Sensitive config files (`.env`, `secrets.env`) are not in version control
 - Agent activity is logged to `autonomy-log.jsonl` per workspace
 - Monitor all active agents via [Mission Control](https://github.com/hansraj316/mission-control-openclaw)
+
+
+## Daily TPM delivery update (2026-04-22)
+- Functional: Add project health scorecards with milestone progress, blockers, and confidence levels
+- Non-functional: Add integration tests for project CRUD and permissions with CI gating
