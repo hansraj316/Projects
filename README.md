@@ -1,8 +1,8 @@
-# Projects Directory
+# Projects
 
 [![Indian Avengers](https://img.shields.io/badge/Managed%20By-Indian%20Avengers-orange?style=flat-square&logo=gitbook)](https://github.com/hansraj316/mission-control-openclaw)
 
-This directory contains software projects and experiments — AI agents, web apps, dev tools, and platform integrations.
+Index of personal software projects and experiments — AI agents, web apps, dev tools, and platform integrations. Each project now lives in its own repo; this README is the map.
 
 ## 🚀 Active Projects (2024–Present)
 
@@ -33,10 +33,25 @@ macOS menu bar app for token tracking, budget enforcement, and local LLM monitor
 - **Tech Stack**: Swift, macOS, Ollama
 - **Status**: Production
 
-#### **[InterviewAgent](https://github.com/hansraj316/InterviewAgent)**
-Multi-agent pipeline for job applications — resume optimization, cover letters, auto-submission at 500+/day.
-- **Tech Stack**: Python, Playwright, Supabase, Claude, MCP
+#### **[InterviewAgent](https://github.com/hansraj316/InterviewAgent)** (showcase)
+Public-facing project home: polished README, daily `features/` and `quality/` delivery journal.
+- **Tech Stack**: docs-only — source lives in the implementation repo below
 - **Status**: Production
+
+#### **[interview-agent](https://github.com/hansraj316/interview-agent)** (implementation)
+Multi-agent pipeline for job applications — resume optimization, cover letters, auto-submission at 500+/day.
+- **Tech Stack**: Python, Streamlit, Playwright, Supabase, Claude, MCP
+- **Status**: Production
+
+#### **[coach-ai](https://github.com/hansraj316/coach-ai)**
+AI coaching platform with web and iOS apps — learning plans, progress tracking, subscription management.
+- **Tech Stack**: Python, Flask (web), Swift (iOS), Kivy (mobile)
+- **Status**: Active
+
+#### **[ai-agent-project](https://github.com/hansraj316/ai-agent-project)**
+Modular agent framework with planning, execution, and memory (Python, YAML workflows).
+- **Tech Stack**: Python, YAML
+- **Status**: Experimental
 
 #### **[EdgeShield](https://github.com/hansraj316/enterprise-edge-security-hub)**
 Enterprise edge security platform for Indian mid-market — real-time threat detection, AI anomaly detection, edge computing security dashboard.
@@ -50,52 +65,17 @@ AI-powered phishing simulation and instant coaching MVP for SMB teams.
 
 ---
 
-## 🧪 Experiments & Learning
+## 📚 Notes
 
-#### **ai_agent_project**
-Modular AI agent framework with planning, execution, and memory capabilities.
-- **Tech Stack**: Python, YAML configurations
+- This repo used to be a monorepo with each project as a subfolder. In 2026-04 the three substantive projects (`CoachAI`, `InterviewAgent`, `ai_agent_project`) were extracted into their own repos via `git subtree split` with history preserved. Several exploratory stubs (`ClaudeCode`, `ClaudeCode-v2`, `WikiRevamp`, `windsurf-demo`, `Project Starlink`, `Azure DevOps MCP`, `Ghostty`) were removed.
+- Some of the linked repos are private — links will 404 for anyone without access.
+- Sensitive config files (`.env`, `secrets.env`) are not in version control.
+- Agent activity is logged to `autonomy-log.jsonl` per workspace.
+- Monitor all active agents via [Mission Control](https://github.com/hansraj316/mission-control-openclaw).
 
-#### **ClaudeCode** / **ClaudeCode-v2**
-Development tools and utilities for working with Claude AI.
-- **Tech Stack**: Node.js
+## License
 
-#### **Azure DevOps MCP**
-Microsoft Cloud Platform integration tools.
-- **Purpose**: DevOps automation and cloud integration
-
-#### **windsurf-demo**
-Demo project showcasing various development techniques.
-
----
-
-## 📁 Project Structure
-
-```
-Projects/
-├── agentdate/               # Agent discovery platform
-├── agentmesh/               # Multi-agent visibility layer
-├── mission-control-openclaw/ # Org command center
-├── PMChat/                  # AI PM assistant
-├── OllamaBar/               # macOS token tracker
-├── InterviewAgent/          # Job automation (500+/day)
-├── enterprise-edge-security-hub/ # EdgeShield security platform
-├── phishshield-drill-engine/ # Phishing simulation MVP
-├── ai_agent_project/        # Agent framework experiments
-├── ClaudeCode/              # Claude dev tools
-├── Azure DevOps MCP/        # Azure integration
-└── windsurf-demo/           # Demo project
-```
-
-## Getting Started
-
-Each project contains its own README with setup instructions. Most Python projects use `venv/` for dependency isolation.
-
-## Notes
-
-- Sensitive config files (`.env`, `secrets.env`) are not in version control
-- Agent activity is logged to `autonomy-log.jsonl` per workspace
-- Monitor all active agents via [Mission Control](https://github.com/hansraj316/mission-control-openclaw)
+[MIT](LICENSE) — see also [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md).
 
 
 ## Daily TPM delivery update (2026-04-22)
