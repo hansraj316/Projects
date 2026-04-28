@@ -81,3 +81,8 @@ AI-powered phishing simulation and instant coaching MVP for SMB teams.
 ## Daily TPM delivery update (2026-04-22)
 - Functional: Add project health scorecards with milestone progress, blockers, and confidence levels
 - Non-functional: Add integration tests for project CRUD and permissions with CI gating
+
+
+## Daily delivery update (2026-04-28)
+- Functional: Add project dependency graph view with critical path highlighting
+- Non-functional: Optimize project list query performance with indexed filters
